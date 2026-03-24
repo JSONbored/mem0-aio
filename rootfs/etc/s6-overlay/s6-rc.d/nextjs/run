@@ -1,0 +1,3 @@
+#!/usr/bin/execlineb -P
+cd /app/ui
+npm run start
