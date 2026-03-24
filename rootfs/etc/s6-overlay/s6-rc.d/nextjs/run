@@ -1,3 +1,8 @@
 #!/usr/bin/execlineb -P
+
+# Export variables available to S6
+with-contenv
+
+# Change to ui directory and start Next.js prod server
 cd /app/ui
 npm run start

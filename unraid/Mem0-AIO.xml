@@ -12,7 +12,7 @@
   <Overview>Mem0 (OpenMemory) is a Universal Memory Layer for AI Agents. It provides an intelligent memory layer using an MCP server and dashboard, allowing AI models to remember user preferences and adapt continuously.&#xD;
 &#xD;
 [b]All-In-One (AIO) Edition[/b]&#xD;
-This template uses `s6-overlay` to internally bundle and manage the API Backend, the Next.js UI, and the Qdrant Vector database all inside a single container setup.&#xD;
+This template uses `s6-overlay` to internally bundle and manage the Python API Backend, the Next.js Web UI, and the Qdrant Vector Database all inside a single managed container setup.&#xD;
 &#xD;
 [b]Included Components[/b]:&#xD;
 - Web UI (Port 3000)&#xD;
@@ -54,18 +54,28 @@ This template uses `s6-overlay` to internally bundle and manage the API Backend,
   <Environment/>
 
   <!-- Core Ports -->
-  <Config Name="Web UI Port" Target="3000" Default="3000" Mode="tcp" Description="The default dashboard UI port." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
-  <Config Name="MCP Server Port" Target="8765" Default="8765" Mode="tcp" Description="The default MCP API server port." Type="Port" Display="always" Required="true" Mask="false">8765</Config>
+  <Config Name="Web UI Port" Target="3000" Default="3000" Mode="tcp" Description="The default Next.js dashboard UI port." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="MCP Server Port" Target="8765" Default="8765" Mode="tcp" Description="The default Python MCP API server port." Type="Port" Display="always" Required="true" Mask="false">8765</Config>
   
   <!-- Storage -->
   <Config Name="App Volumes - Qdrant Storage" Target="/mem0/storage" Default="/mnt/user/appdata/mem0-aio/qdrant" Mode="rw" Description="Persistent storage for the internal Qdrant vector database (saves your AI memories)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/mem0-aio/qdrant</Config>
 
   <!-- Required APIs -->
-  <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="API Key for OpenAI. (Used for generating text/embeddings)." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="API Key for OpenAI. (Used for default LLM and Embeddings). If entirely using Ollama, this can be safely mocked (e.g. 'sk-ollama')." Type="Variable" Display="always" Required="true" Mask="true"/>
   
-  <!-- Custom Overrides -->
-  <Config Name="OpenAI Base URL" Target="OPENAI_API_BASE" Default="" Mode="" Description="(Optional) Set this to your 'http://OLLAMA_IP:11434/v1' to use a local Ollama instance instead of the OpenAI cloud." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <!-- Advanced: Core Overrides -->
   <Config Name="Default User" Target="USER" Default="admin" Mode="" Description="The default user namespace to create memories under for the UI dashboard." Type="Variable" Display="advanced" Required="false" Mask="false">admin</Config>
-  <Config Name="Public API URL" Target="NEXT_PUBLIC_API_URL" Default="http://localhost:8765" Mode="" Description="The public URL where the UI client can reach the MCP server. If self-hosting remotely, update this." Type="Variable" Display="advanced" Required="true" Mask="false">http://localhost:8765</Config>
+  <Config Name="Public API URL" Target="NEXT_PUBLIC_API_URL" Default="http://localhost:8765" Mode="" Description="The public URL where the UI client can reach the MCP server. If resolving externally (Nginx Proxy/Cloudflare), update this to match the external domain proxying to port 8765." Type="Variable" Display="advanced" Required="true" Mask="false">http://localhost:8765</Config>
+  
+  <!-- Advanced: Local LLM Configuration (Ollama) -->
+  <Config Name="LLM Provider" Target="LLM_PROVIDER" Default="openai" Mode="" Description="Provider for Memory Operations. Change to 'ollama' to use local inference." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="LLM Model" Target="LLM_MODEL" Default="gpt-4o-mini" Mode="" Description="LLM Model name (e.g., 'gpt-4o-mini' or 'llama3.1:latest' if using Ollama)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Ollama Base URL" Target="OLLAMA_BASE_URL" Default="" Mode="" Description="If using LLM_PROVIDER=ollama, specify your absolute Ollama IP endpoint here (e.g. http://192.168.1.50:11434)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  
+  <!-- Advanced: Local Embeddings Configuration -->
+  <Config Name="Embedder Provider" Target="EMBEDDER_PROVIDER" Default="openai" Mode="" Description="Provider for Vector Embeddings. Change to 'ollama' to embed locally." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Embedder Model" Target="EMBEDDER_MODEL" Default="text-embedding-3-small" Mode="" Description="Embedding Model name (e.g. 'text-embedding-3-small' or 'nomic-embed-text' if using Ollama)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 
+  <!-- Advanced: Internal Qdrant Routing -->
+  <Config Name="Qdrant API URL" Target="QDRANT_URL" Default="http://localhost:6333" Mode="" Description="Internal Routing for the API to reach the embedded Qdrant Server. Only change if using an external DB." Type="Variable" Display="advanced" Required="false" Mask="false">http://localhost:6333</Config>
 </Container>
