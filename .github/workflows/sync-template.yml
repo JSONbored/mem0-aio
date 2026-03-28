@@ -30,7 +30,7 @@ jobs:
         run: |
           cp mem0-aio.xml target-repo/mem0-aio.xml
           cd target-repo
-          git config user.name "JSONbored"
-          git config user.email "JSONbored@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add mem0-aio.xml
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore: auto-sync mem0-aio.xml from upstream" && git push)
