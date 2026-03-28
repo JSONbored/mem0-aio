@@ -18,3 +18,13 @@ Your memories are persisted safely to your Unraid Appdata folder.
 
 ## 📈 Star History
 [![Star History Chart](https://api.star-history.com/svg?repos=JSONbored/mem0-aio&theme=dark)](https://star-history.com/#JSONbored/mem0-aio&Date)
+
+---
+
+## 👨‍💻 About the Creator
+
+Built with 🖤 by **[JSONbored](https://github.com/JSONbored)**.
+
+- 🌐 **Portfolio & Services:** [aethereal.dev](https://aethereal.dev)
+- 📅 **Book a Call:** [cal.com/aethereal](https://cal.com/aethereal) 
+- ☕ **Support my work:** [Sponsor on GitHub](https://github.com/sponsors/JSONbored)
