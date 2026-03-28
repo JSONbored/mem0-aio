@@ -15,3 +15,6 @@ This AIO (All-In-One) repackages all 3 of those individual services into a singl
 - OpenMemory Next.js UI Dashboard (Internal: 3000)
 
 Your memories are persisted safely to your Unraid Appdata folder.
+
+## 📈 Star History
+[![Star History Chart](https://api.star-history.com/svg?repos=JSONbored/mem0-aio&theme=dark)](https://star-history.com/#JSONbored/mem0-aio&Date)
