@@ -5,12 +5,12 @@ RUN corepack enable
 
 WORKDIR /build/ui
 # Copy package files first to cache dependencies
-COPY openmemory/ui/package.json openmemory/ui/pnpm-lock.yaml* ./
+COPY openmemory/openmemory/ui/package.json openmemory/ui/pnpm-lock.yaml* ./
 # Note: In the Github Actions of Mem0, they might just use npm, but the repo showed pnpm
 RUN pnpm install --frozen-lockfile || npm install
 
 # Copy source and build
-COPY openmemory/ui/ ./
+COPY openmemory/openmemory/ui/ ./
 # We need to set a dummy URL during build so Next.js doesn't fail static generation
 ENV NEXT_PUBLIC_API_URL=http://localhost:8765
 RUN pnpm build || npm run build
@@ -68,7 +68,7 @@ RUN set -e && \
 WORKDIR /app
 
 # Copy API files
-COPY openmemory/api/ /app/api/
+COPY openmemory/openmemory/api/ /app/api/
 RUN cd /app/api && pip install --no-cache-dir -r requirements.txt
 
 # Copy built UI from Stage 1
