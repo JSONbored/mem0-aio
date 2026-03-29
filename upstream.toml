@@ -1,0 +1,12 @@
+[upstream]
+name = "Mem0"
+type = "github-release"
+repo = "mem0ai/mem0"
+version_source = "dockerfile-arg"
+version_key = "UPSTREAM_VERSION"
+submodule_path = "openmemory"
+strategy = "pr"
+stable_only = true
+
+[notifications]
+release_notes_url = "https://github.com/mem0ai/mem0/releases"
