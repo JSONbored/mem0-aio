@@ -5,20 +5,44 @@ RUN corepack enable
 
 WORKDIR /build/ui
 # Copy package files first to cache dependencies
-COPY openmemory/openmemory/ui/package.json openmemory/ui/pnpm-lock.yaml* ./
+COPY openmemory/openmemory/ui/package.json openmemory/openmemory/ui/pnpm-lock.yaml* ./
 # Note: In the Github Actions of Mem0, they might just use npm, but the repo showed pnpm
 RUN pnpm install --frozen-lockfile || npm install
 
 # Copy source and build
 COPY openmemory/openmemory/ui/ ./
-# We need to set a dummy URL during build so Next.js doesn't fail static generation
-ENV NEXT_PUBLIC_API_URL=http://localhost:8765
+# Route browser traffic back through the single published UI port.
+RUN cat <<'EOF' > /build/ui/next.config.mjs
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  images: {
+    unoptimized: true,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/openmemory-api/:path*',
+        destination: 'http://127.0.0.1:8765/:path*',
+      },
+    ]
+  },
+}
+
+export default nextConfig
+EOF
+ENV NEXT_PUBLIC_API_URL=/openmemory-api
+ENV NEXT_PUBLIC_USER_ID=default_user
 RUN pnpm build || npm run build
 
-# Stage 2: Main Image (Ubuntu for S6 + Python + Node + Qdrant)
-FROM ubuntu:24.04
+FROM qdrant/qdrant:latest AS qdrant-bin
 
-# S6 Overlay version
+FROM ubuntu:24.04
 ARG S6_OVERLAY_VERSION=3.2.0.0
 
 # Install system dependencies, python, nodejs
@@ -33,6 +57,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     libpq-dev \
+    libunwind8 \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -45,12 +70,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Qdrant statically
-RUN cd /tmp && \
-    wget -qO qdrant.tar.gz https://github.com/qdrant/qdrant/releases/download/v1.13.0/qdrant-x86_64-unknown-linux-gnu.tar.gz && \
-    tar -xzf qdrant.tar.gz && \
-    mv qdrant /usr/local/bin/ && \
-    rm qdrant.tar.gz
+COPY --from=qdrant-bin /qdrant/qdrant /usr/local/bin/qdrant
 
 # Install S6 Overlay
 RUN set -e && \
@@ -76,9 +96,27 @@ COPY --from=ui-builder /build/ui/ /app/ui/
 
 # Setup S6 configuration
 COPY rootfs/ /
+RUN rm -rf \
+    /etc/s6-overlay/s6-rc.d/fastapi \
+    /etc/s6-overlay/s6-rc.d/nextjs \
+    /etc/s6-overlay/s6-rc.d/qdrant && \
+    rm -f \
+    /etc/s6-overlay/s6-rc.d/user/contents.d/fastapi \
+    /etc/s6-overlay/s6-rc.d/user/contents.d/nextjs \
+    /etc/s6-overlay/s6-rc.d/user/contents.d/qdrant && \
+    chmod +x /app/ui/entrypoint.sh && \
+    sed -i 's|cd /app|cd /app/ui|' /app/ui/entrypoint.sh && \
+    find /etc/cont-init.d -type f -exec chmod +x {} \; && \
+    find /etc/services.d -type f -name "run" -exec chmod +x {} \;
 
 # Set environment variables for services
 ENV QDRANT__STORAGE__STORAGE_PATH=/mem0/storage
+ENV QDRANT_HOST=127.0.0.1
+ENV QDRANT_PORT=6333
+ENV DATABASE_URL=sqlite:////mem0/storage/openmemory.db
+ENV NEXT_PUBLIC_API_URL=/openmemory-api
+ENV NEXT_PUBLIC_USER_ID=default_user
+ENV USER=default_user
 ENV HOST="0.0.0.0"
 ENV PORT="3000"
 
@@ -87,6 +125,9 @@ VOLUME ["/mem0/storage"]
 
 # Expose ports: UI (3000), MCP API (8765), Qdrant (6333)
 EXPOSE 3000 8765 6333
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:3000/ >/dev/null || exit 1
 
 # Start s6 init
 ENTRYPOINT ["/init"]

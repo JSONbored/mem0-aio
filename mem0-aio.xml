@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>mem0-aio</Name>
+  <Repository>ghcr.io/jsonbored/mem0-aio:latest</Repository>
+  <Registry>https://ghcr.io/jsonbored/mem0-aio</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/JSONbored/mem0-aio/issues</Support>
+  <Project>https://github.com/JSONbored/mem0-aio</Project>
+  <Overview>Mem0 (OpenMemory) gives LLM apps a persistent memory layer with a UI, API, and vector store.&#xD;
+[center][b][color=#ff8c00]JSONbored Verified AIO Template[/color][/b][/center]
+
+This AIO template bundles the OpenMemory UI, API, and Qdrant into one container with persistent storage and same-origin browser routing by default. It is designed to be easy for first-time Unraid users while still exposing advanced overrides for direct API access, alternate providers, and external backends.&#xD;
+&#xD;
+[b]Beginner Defaults:[/b]&#xD;
+1. Install and start the container.&#xD;
+2. If you want OpenAI immediately, set `OPENAI_API_KEY` below.&#xD;
+3. If you prefer local inference, you can leave the key blank, let the stack boot, and then configure Ollama or another provider from the UI.&#xD;
+4. Your data persists in the mapped `/mem0/storage` path.</Overview>
+  <Category>AI: Tools: Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:3000]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/icons/mem0.jpeg</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Description/>
+  <Networking>
+    <Mode>bridge</Mode>
+    <Publish>
+      <Port>
+        <HostPort>3000</HostPort>
+        <ContainerPort>3000</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+      <Port>
+        <HostPort>8765</HostPort>
+        <ContainerPort>8765</ContainerPort>
+        <Protocol>tcp</Protocol>
+      </Port>
+    </Publish>
+  </Networking>
+  <Data>
+    <Volume>
+      <HostDir>/mnt/user/appdata/mem0-aio/storage</HostDir>
+      <ContainerDir>/mem0/storage</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+  </Data>
+  <Environment/>
+
+  <Config Name="Web UI Port" Target="3000" Default="3000" Mode="tcp" Description="Main OpenMemory web interface." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="API / MCP Port" Target="8765" Default="8765" Mode="tcp" Description="Direct API and MCP port. The UI does not require this port, but external MCP clients may." Type="Port" Display="advanced" Required="true" Mask="false">8765</Config>
+  <Config Name="AppData - OpenMemory Storage" Target="/mem0/storage" Default="/mnt/user/appdata/mem0-aio/storage" Mode="rw" Description="Persistent storage for the SQLite database and embedded Qdrant data." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/mem0-aio/storage</Config>
+
+  <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="Optional on first boot. Required if you want OpenAI as the default provider. If left blank, the container still boots so you can configure Ollama or another provider from the UI." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Default User ID" Target="USER" Default="default_user" Mode="" Description="Default memory namespace used by the UI and API." Type="Variable" Display="always" Required="false" Mask="false">default_user</Config>
+
+  <Config Name="[UI] Browser API URL" Target="NEXT_PUBLIC_API_URL" Default="/openmemory-api" Mode="" Description="Default same-origin proxy path for the Web UI. Leave this alone unless you intentionally want the UI to call a different API URL directly." Type="Variable" Display="advanced" Required="false" Mask="false">/openmemory-api</Config>
+  <Config Name="[UI] Public User ID" Target="NEXT_PUBLIC_USER_ID" Default="default_user" Mode="" Description="Default user ID shown in the browser client." Type="Variable" Display="advanced" Required="false" Mask="false">default_user</Config>
+
+  <Config Name="[LLM] Provider" Target="LLM_PROVIDER" Default="" Mode="" Description="Optional first-run override. Examples: openai, ollama, anthropic, groq, together, deepseek." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[LLM] Model" Target="LLM_MODEL" Default="" Mode="" Description="Optional first-run LLM model name." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[LLM] API Key" Target="LLM_API_KEY" Default="" Mode="" Description="Optional provider-specific API key if you are not using OPENAI_API_KEY." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="[LLM] Base URL" Target="LLM_BASE_URL" Default="" Mode="" Description="Optional custom API base URL for OpenAI-compatible endpoints." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[LLM] Ollama Base URL" Target="OLLAMA_BASE_URL" Default="" Mode="" Description="Optional Ollama URL. Example: http://host.docker.internal:11434" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
+  <Config Name="[Embedder] Provider" Target="EMBEDDER_PROVIDER" Default="" Mode="" Description="Optional first-run embedder provider override." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[Embedder] Model" Target="EMBEDDER_MODEL" Default="" Mode="" Description="Optional first-run embedder model override." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[Embedder] API Key" Target="EMBEDDER_API_KEY" Default="" Mode="" Description="Optional provider-specific embedder API key." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="[Embedder] Base URL" Target="EMBEDDER_BASE_URL" Default="" Mode="" Description="Optional custom embedder API base URL." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
+  <Config Name="[Storage Override] DATABASE_URL" Target="DATABASE_URL" Default="sqlite:////mem0/storage/openmemory.db" Mode="" Description="Advanced override for the API database connection. Leave default for normal AIO usage." Type="Variable" Display="advanced" Required="false" Mask="false">sqlite:////mem0/storage/openmemory.db</Config>
+  <Config Name="[Storage Override] Qdrant Host" Target="QDRANT_HOST" Default="127.0.0.1" Mode="" Description="Advanced override for the vector database host. Leave default for the embedded Qdrant service." Type="Variable" Display="advanced" Required="false" Mask="false">127.0.0.1</Config>
+  <Config Name="[Storage Override] Qdrant Port" Target="QDRANT_PORT" Default="6333" Mode="" Description="Advanced override for the vector database port. Leave default for the embedded Qdrant service." Type="Variable" Display="advanced" Required="false" Mask="false">6333</Config>
+</Container>

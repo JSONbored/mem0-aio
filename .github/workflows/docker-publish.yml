@@ -1,39 +1,85 @@
-name: Publish Docker Image
+name: Build Mem0-AIO
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - 'README.md'
-      - 'unraid/**'
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 6 * * 0'
   workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: jsonbored/mem0-aio
+  PUBLISH_PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
-  build-and-push-image:
+  smoke-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: mem0-aio:ci
+          platforms: linux/amd64
+
+      - name: Smoke test
+        run: |
+          chmod +x scripts/smoke-test.sh
+          export KEEP_SMOKE_ARTIFACTS=1
+          bash -x ./scripts/smoke-test.sh mem0-aio:ci
+
+      - name: Dump smoke test diagnostics
+        if: failure()
+        run: |
+          echo "Active containers:"
+          docker ps -a
+          echo
+          echo "Inspecting smoke container:"
+          docker inspect mem0-aio-smoke || true
+          echo
+          echo "Container logs:"
+          docker logs mem0-aio-smoke || true
+
+  publish:
+    needs: smoke-test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
-      - name: Setup Qemu
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to the Container registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -56,6 +102,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
+          platforms: ${{ env.PUBLISH_PLATFORMS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

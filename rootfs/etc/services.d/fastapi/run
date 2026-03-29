@@ -1,0 +1,16 @@
+#!/command/with-contenv bash
+set -euo pipefail
+
+set -a
+. /var/run/mem0-aio.env
+set +a
+
+for _ in $(seq 1 60); do
+    if curl -fsS "http://127.0.0.1:6333/readyz" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+cd /app/api
+exec uvicorn main:app --host 0.0.0.0 --port 8765

@@ -1,0 +1,16 @@
+#!/command/with-contenv bash
+set -euo pipefail
+
+set -a
+. /var/run/mem0-aio.env
+set +a
+
+for _ in $(seq 1 60); do
+    if curl -fsS "http://127.0.0.1:8765/api/v1/config/" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+cd /app/ui
+exec ./entrypoint.sh npm run start -- --hostname 0.0.0.0 --port 3000
