@@ -40,14 +40,16 @@ ENV NEXT_PUBLIC_API_URL=/openmemory-api
 ENV NEXT_PUBLIC_USER_ID=default_user
 RUN pnpm build || npm run build
 
-FROM qdrant/qdrant:latest AS qdrant-bin
+ARG UPSTREAM_VERSION=v1.0.9
+FROM qdrant/qdrant@sha256:94728574965d17c6485dd361aa3c0818b325b9016dac5ea6afec7b4b2700865f AS qdrant-bin
 
 FROM ubuntu:24.04
 ARG S6_OVERLAY_VERSION=3.2.0.0
+ARG TARGETARCH
 
 # Install system dependencies, python, nodejs
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     xz-utils \
@@ -63,7 +65,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Node.js 22 LTS
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs && \
+    apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 # Setup python virtual environment
@@ -74,9 +76,11 @@ COPY --from=qdrant-bin /qdrant/qdrant /usr/local/bin/qdrant
 
 # Install S6 Overlay
 RUN set -e && \
-    S6_ARCH=$(uname -m) && \
+    S6_ARCH="${TARGETARCH:-$(uname -m)}" && \
     if [ "$S6_ARCH" = "x86_64" ]; then S6_ARCH="x86_64"; \
+    elif [ "$S6_ARCH" = "amd64" ]; then S6_ARCH="x86_64"; \
     elif [ "$S6_ARCH" = "aarch64" ]; then S6_ARCH="aarch64"; \
+    elif [ "$S6_ARCH" = "arm64" ]; then S6_ARCH="aarch64"; \
     else echo "Unsupported architecture: $S6_ARCH" && exit 1; fi && \
     curl -jkL -o /tmp/s6-overlay-noarch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" && \
     tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
@@ -89,7 +93,8 @@ WORKDIR /app
 
 # Copy API files
 COPY openmemory/openmemory/api/ /app/api/
-RUN cd /app/api && pip install --no-cache-dir -r requirements.txt
+ENV PIP_NO_CACHE_DIR=1
+RUN cd /app/api && pip install -r requirements.txt
 
 # Copy built UI from Stage 1
 COPY --from=ui-builder /build/ui/ /app/ui/

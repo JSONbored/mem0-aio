@@ -19,16 +19,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Repository
-        uses: actions/checkout@v5
-        
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Check sync token availability
+        id: sync-token
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          if [[ -n "${SYNC_TOKEN}" ]]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "SYNC_TOKEN is not configured; skipping sync."
+          fi
+
       - name: Checkout Target Repository
-        uses: actions/checkout@v5
+        if: ${{ steps.sync-token.outputs.enabled == 'true' }}
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: JSONbored/awesome-unraid
           token: ${{ secrets.SYNC_TOKEN }}
           path: target-repo
-          
+
       - name: Copy and commit template
+        if: ${{ steps.sync-token.outputs.enabled == 'true' }}
         run: |
           cp mem0-aio.xml target-repo/mem0-aio.xml
           mkdir -p target-repo/icons

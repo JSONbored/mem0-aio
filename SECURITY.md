@@ -2,11 +2,12 @@
 
 ## Supported Versions
 
-Only the `latest` tag and the `main` branch are supported with security fixes.
+Only the current `latest` tag, the current upstream-matching version tags, and the `main` branch are supported with security fixes.
 
 | Version | Supported |
 | ------- | --------- |
 | latest  | yes |
+| current upstream version tags | yes |
 | older   | no |
 
 ## Reporting a Vulnerability

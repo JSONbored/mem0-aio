@@ -1,0 +1,118 @@
+name: Check Upstream Version
+
+on:
+  schedule:
+    - cron: '17 7 * * 1'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Check upstream
+        id: upstream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/check-upstream.py
+          ./scripts/check-upstream.py
+
+      - name: Stop if already current
+        if: ${{ steps.upstream.outputs.updates_available != 'true' }}
+        run: echo "Upstream is already current."
+
+      - name: Create update branch
+        if: ${{ steps.upstream.outputs.updates_available == 'true' && steps.upstream.outputs.strategy == 'pr' }}
+        run: git checkout -b "codex/upstream-${{ steps.upstream.outputs.latest_version }}"
+
+      - name: Apply upstream version bump
+        if: ${{ steps.upstream.outputs.updates_available == 'true' && steps.upstream.outputs.strategy == 'pr' }}
+        env:
+          WRITE_UPSTREAM_VERSION: "true"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/check-upstream.py
+
+      - name: Commit upstream version bump
+        if: ${{ steps.upstream.outputs.updates_available == 'true' && steps.upstream.outputs.strategy == 'pr' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Dockerfile openmemory
+          git commit -m "chore: bump upstream to ${{ steps.upstream.outputs.latest_version }}"
+
+      - name: Push update branch
+        if: ${{ steps.upstream.outputs.updates_available == 'true' && steps.upstream.outputs.strategy == 'pr' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: git push --force --set-upstream origin "codex/upstream-${{ steps.upstream.outputs.latest_version }}"
+
+      - name: Open or update pull request
+        if: ${{ steps.upstream.outputs.updates_available == 'true' && steps.upstream.outputs.strategy == 'pr' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body_file="$(mktemp)"
+          cat > "${body_file}" <<EOF
+          Upstream ${{ steps.upstream.outputs.upstream_name }} has a newer stable version.
+
+          - Current pinned upstream version: \`${{ steps.upstream.outputs.current_version }}\`
+          - Latest upstream version: \`${{ steps.upstream.outputs.latest_version }}\`
+          - Release notes: ${{ steps.upstream.outputs.release_notes_url }}
+
+          This PR was opened automatically by the upstream monitor workflow.
+          EOF
+
+          existing_pr="$(gh pr list --head "codex/upstream-${{ steps.upstream.outputs.latest_version }}" --base main --json number --jq '.[0].number')"
+          if [[ -n "${existing_pr}" ]]; then
+            gh pr edit "${existing_pr}" \
+              --title "chore: bump upstream to ${{ steps.upstream.outputs.latest_version }}" \
+              --body-file "${body_file}"
+          else
+            gh pr create \
+              --base main \
+              --head "codex/upstream-${{ steps.upstream.outputs.latest_version }}" \
+              --title "chore: bump upstream to ${{ steps.upstream.outputs.latest_version }}" \
+              --body-file "${body_file}"
+          fi
+
+      - name: Open or update notification issue
+        if: ${{ steps.upstream.outputs.updates_available == 'true' && steps.upstream.outputs.strategy == 'notify' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          issue_title="Upstream update available: ${{ steps.upstream.outputs.latest_version }}"
+          body_file="$(mktemp)"
+          cat > "${body_file}" <<EOF
+          Upstream ${{ steps.upstream.outputs.upstream_name }} has a newer stable version available.
+
+          - Current pinned upstream version: \`${{ steps.upstream.outputs.current_version }}\`
+          - Latest upstream version: \`${{ steps.upstream.outputs.latest_version }}\`
+          - Release notes: ${{ steps.upstream.outputs.release_notes_url }}
+          EOF
+
+          existing_issue="$(gh issue list --state open --search "${issue_title} in:title" --json number --jq '.[0].number')"
+          if [[ -n "${existing_issue}" ]]; then
+            gh issue edit "${existing_issue}" --title "${issue_title}" --body-file "${body_file}"
+          else
+            gh issue create --title "${issue_title}" --body-file "${body_file}" --label enhancement
+          fi

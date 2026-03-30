@@ -1,0 +1,166 @@
+name: Build Mem0-AIO
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - 'rootfs/**'
+      - 'scripts/**'
+      - 'openmemory'
+      - '.gitmodules'
+      - 'upstream.toml'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - 'rootfs/**'
+      - 'scripts/**'
+      - 'openmemory'
+      - '.gitmodules'
+      - 'upstream.toml'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+    inputs:
+      run_smoke_test:
+        description: "Run the smoke-test job"
+        required: false
+        default: true
+        type: boolean
+      publish_image:
+        description: "Publish image tags from the current ref"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  REGISTRY: ghcr.io
+  IMAGE_NAME: jsonbored/mem0-aio
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: recursive
+
+      - name: Validate scripts and metadata
+        run: |
+          bash -n scripts/smoke-test.sh
+          python3 -m py_compile scripts/check-upstream.py
+          find rootfs -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
+          find rootfs -type f -path '*/run' -print0 | xargs -0 -n1 bash -n
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse("mem0-aio.xml")
+          print("Parsed mem0-aio.xml successfully")
+          PY
+
+  smoke-test:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_smoke_test == true }}
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Build local test image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          load: true
+          tags: mem0-aio:ci
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: |
+          chmod +x scripts/smoke-test.sh
+          export KEEP_SMOKE_ARTIFACTS=1
+          bash -x ./scripts/smoke-test.sh mem0-aio:ci
+
+      - name: Dump smoke test diagnostics
+        if: failure()
+        run: |
+          docker ps -a
+          docker inspect mem0-aio-smoke || true
+          docker logs mem0-aio-smoke || true
+
+  publish:
+    if: ${{ github.event_name != 'pull_request' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_image == true)) }}
+    needs:
+      - validate
+      - smoke-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: prep
+        run: |
+          image="${REGISTRY}/${IMAGE_NAME}"
+          sha_tag="${image}:sha-${GITHUB_SHA}"
+          version="$(awk -F= '/^ARG UPSTREAM_VERSION=/{print $2; exit}' Dockerfile)"
+          version_no_v="${version#v}"
+          IFS='.' read -r major minor patch <<< "${version_no_v}"
+
+          {
+            echo "tags<<EOF"
+            echo "${image}:latest"
+            echo "${image}:${version}"
+            if [[ -n "${major:-}" ]]; then
+              echo "${image}:v${major}"
+            fi
+            if [[ -n "${major:-}" && -n "${minor:-}" ]]; then
+              echo "${image}:v${major}.${minor}"
+            fi
+            echo "${sha_tag}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.prep.outputs.tags }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
