@@ -6,7 +6,6 @@
     ":dependencyDashboard"
   ],
   "pinDigests": true,
-  "pinTags": false,
   "labels": ["dependencies"],
   "packageRules": [
     {
