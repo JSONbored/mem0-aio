@@ -1,0 +1,32 @@
+name: Installation help
+description: Get help with first-run setup, Unraid mapping choices, or upgrade behavior
+title: "[Help]: "
+labels:
+  - question
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: Describe the install, upgrade, or configuration task you are working through.
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: What is happening now?
+      description: Include the exact symptom, error, or point where you got stuck.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Unraid version, image tag, relevant template values, and whether this is a fresh install or an upgrade.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Paste container logs or screenshots that will help reproduce the problem faster.
