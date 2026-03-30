@@ -1,0 +1,363 @@
+name: CI / Mem0-AIO
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - 'rootfs/**'
+      - 'scripts/**'
+      - 'upstream.toml'
+      - 'renovate.json'
+      - '*.xml'
+      - 'assets/*'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - 'rootfs/**'
+      - 'scripts/**'
+      - 'upstream.toml'
+      - 'renovate.json'
+      - '*.xml'
+      - 'assets/*'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      run_smoke_test:
+        description: "Run the smoke-test job"
+        required: false
+        default: true
+        type: boolean
+      publish_image:
+        description: "Publish image tags from the current ref"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  REGISTRY: ghcr.io
+  IMAGE_NAME: jsonbored/mem0-aio
+  PUBLISH_PLATFORMS: linux/amd64,linux/arm64
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      build_related: ${{ steps.filter.outputs.build_related }}
+      template_assets_related: ${{ steps.filter.outputs.template_assets_related }}
+      renovate_related: ${{ steps.filter.outputs.renovate_related }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Classify changed files
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before || '' }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "build_related=true" >> "${GITHUB_OUTPUT}"
+            echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
+            echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            base="${BASE_SHA}"
+            head="${HEAD_SHA}"
+          else
+            base="${BEFORE_SHA}"
+            head="${GITHUB_SHA_VALUE}"
+          fi
+
+          if ! git rev-parse --git-dir >/dev/null 2>&1; then
+            echo "Git metadata is unavailable; treating the workflow as fully impacted."
+            echo "build_related=true" >> "${GITHUB_OUTPUT}"
+            echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
+            echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [[ -z "${base}" || "${base}" =~ ^0+$ ]]; then
+            if ! changed_files="$(git show --pretty='' --name-only "${head}" 2>/dev/null)"; then
+              echo "Unable to inspect commit range; treating the workflow as fully impacted."
+              echo "build_related=true" >> "${GITHUB_OUTPUT}"
+              echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
+              echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+          else
+            if ! changed_files="$(git diff --name-only "${base}" "${head}" 2>/dev/null)"; then
+              echo "Unable to diff commit range; treating the workflow as fully impacted."
+              echo "build_related=true" >> "${GITHUB_OUTPUT}"
+              echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
+              echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+          fi
+
+          printf 'Changed files:\n%s\n' "${changed_files}"
+
+          build_related=false
+          template_assets_related=false
+          renovate_related=false
+
+          while IFS= read -r path; do
+            [[ -z "${path}" ]] && continue
+            case "${path}" in
+              Dockerfile|upstream.toml|rootfs/*|scripts/*|openmemory/*)
+                build_related=true
+                ;;
+              *.xml|assets/*)
+                template_assets_related=true
+                ;;
+              renovate.json)
+                renovate_related=true
+                ;;
+              .github/workflows/*)
+                build_related=true
+                renovate_related=true
+                ;;
+            esac
+          done <<< "${changed_files}"
+
+          echo "build_related=${build_related}" >> "${GITHUB_OUTPUT}"
+          echo "template_assets_related=${template_assets_related}" >> "${GITHUB_OUTPUT}"
+          echo "renovate_related=${renovate_related}" >> "${GITHUB_OUTPUT}"
+
+  validate-repo:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.template_assets_related == 'true' || needs.detect-changes.outputs.renovate_related == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: recursive
+
+      - name: Validate shell and python scripts
+        if: ${{ needs.detect-changes.outputs.build_related == 'true' }}
+        run: |
+          bash -n scripts/smoke-test.sh
+          find rootfs -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
+          find rootfs -type f -path '*/run' -print0 | xargs -0 -n1 bash -n
+
+      - name: Validate XML
+        if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.template_assets_related == 'true' }}
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse('mem0-aio.xml')
+          print('mem0-aio.xml parsed successfully')
+          PY
+
+      - name: Validate Renovate config
+        if: ${{ needs.detect-changes.outputs.renovate_related == 'true' }}
+        run: npx --yes --package renovate renovate-config-validator renovate.json
+
+  pinned-actions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Enforce pinned action SHAs
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          workflow_dir = pathlib.Path(".github/workflows")
+          pattern = re.compile(r"^\s*uses:\s*([^@\s]+)@([^\s#]+)")
+          sha_pattern = re.compile(r"^[0-9a-f]{40}$")
+          failures = []
+
+          for path in sorted(workflow_dir.glob("*.yml")):
+              for lineno, line in enumerate(path.read_text().splitlines(), start=1):
+                  match = pattern.match(line)
+                  if not match:
+                      continue
+                  target, ref = match.groups()
+                  if target.startswith("./"):
+                      continue
+                  if not sha_pattern.fullmatch(ref):
+                      failures.append(f"{path}:{lineno}: action is not pinned to a full SHA -> {line.strip()}")
+
+          if failures:
+              print("\n".join(failures), file=sys.stderr)
+              sys.exit(1)
+          print("All workflow actions are pinned to full commit SHAs.")
+          PY
+
+  dependency-review:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Dependency review
+        uses: actions/dependency-review-action@3c4e3dcb1aa7874d2c16be7d79418e9b7efd6261 # v4.8.2
+
+  smoke-test:
+    if: ${{ needs.detect-changes.outputs.build_related == 'true' && (github.event_name != 'workflow_dispatch' || inputs.run_smoke_test == true) }}
+    needs:
+      - detect-changes
+      - validate-repo
+      - pinned-actions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Build local test image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          load: true
+          tags: mem0-aio:ci
+          platforms: linux/amd64
+
+      - name: Smoke test
+        run: |
+          chmod +x scripts/smoke-test.sh
+          export KEEP_SMOKE_ARTIFACTS=1
+          bash -x ./scripts/smoke-test.sh mem0-aio:ci
+
+      - name: Dump smoke test diagnostics
+        if: failure()
+        run: |
+          echo "Active containers:"
+          docker ps -a
+          echo
+          echo "Inspecting smoke container:"
+          docker inspect mem0-aio-smoke || true
+          echo
+          echo "Container logs:"
+          docker logs mem0-aio-smoke || true
+
+  publish:
+    if: ${{ needs.detect-changes.outputs.build_related == 'true' && github.event_name != 'pull_request' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_image == true)) }}
+    needs:
+      - detect-changes
+      - validate-repo
+      - pinned-actions
+      - smoke-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84f9f2a5d20d150224359cc # v5.8.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=long
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ env.PUBLISH_PLATFORMS }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  sync-awesome-unraid:
+    if: ${{ needs.detect-changes.outputs.template_assets_related == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs:
+      - detect-changes
+      - validate-repo
+      - pinned-actions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Source Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        
+      - name: Verify sync token is present
+        id: token
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          if [[ -n "${SYNC_TOKEN}" ]]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "SYNC_TOKEN is not configured; skipping sync."
+          fi
+          
+      - name: Checkout Target Repository
+        if: ${{ steps.token.outputs.enabled == 'true' }}
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: JSONbored/awesome-unraid
+          token: ${{ secrets.SYNC_TOKEN }}
+          path: target-repo
+          
+      - name: Copy and commit template
+        if: ${{ steps.token.outputs.enabled == 'true' }}
+        run: |
+          cp mem0-aio.xml target-repo/mem0-aio.xml
+          mkdir -p target-repo/icons
+          cp assets/mem0.jpeg target-repo/icons/mem0.jpeg
+          cd target-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mem0-aio.xml icons/mem0.jpeg
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: auto-sync mem0-aio assets from upstream" && git push)
