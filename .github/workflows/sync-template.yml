@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         
       - name: Checkout Target Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: JSONbored/awesome-unraid
           token: ${{ secrets.SYNC_TOKEN }}
