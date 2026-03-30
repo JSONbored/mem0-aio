@@ -1,1 +1,1 @@
-Local Docker smoke tests passed on 2026-03-28 for both `linux/arm64` and `linux/amd64` after fixing the AIO supervision, Qdrant runtime dependency, same-origin UI proxying, and first-boot placeholder handling.
+Local Docker smoke tests passed on 2026-03-29 for both `linux/arm64` and `linux/amd64`, including restart and persistence verification, after hardening the image build, workflow security, and upstream release tracking.

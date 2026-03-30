@@ -42,27 +42,48 @@ dump_failure_state() {
     docker logs "${CONTAINER_NAME}" >&2 || true
 }
 
-attempts=$(( READY_TIMEOUT_SECONDS / POLL_INTERVAL_SECONDS ))
-for _ in $(seq 1 "${attempts}"); do
+wait_for_ready() {
+    local attempts
+    attempts=$(( READY_TIMEOUT_SECONDS / POLL_INTERVAL_SECONDS ))
+    for _ in $(seq 1 "${attempts}"); do
+        if curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/" >/dev/null 2>&1 && \
+           curl -fsS "http://127.0.0.1:${HOST_API_PORT}/api/v1/config/" >/dev/null 2>&1 && \
+           curl -fsS "http://127.0.0.1:${HOST_QDRANT_PORT}/readyz" >/dev/null 2>&1; then
+            return 0
+        fi
+        if ! docker ps --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
+            echo "Smoke test container exited unexpectedly." >&2
+            dump_failure_state
+            exit 1
+        fi
+        sleep "${POLL_INTERVAL_SECONDS}"
+    done
+
+    echo "Timed out waiting for mem0-aio services to become ready." >&2
+    dump_failure_state
+    exit 1
+}
+
+verify_runtime() {
     if curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/" >/dev/null 2>&1 && \
        curl -fsS "http://127.0.0.1:${HOST_API_PORT}/api/v1/config/" >/dev/null 2>&1 && \
        curl -fsS "http://127.0.0.1:${HOST_QDRANT_PORT}/readyz" >/dev/null 2>&1; then
-        break
+        :
     fi
-    if ! docker ps --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
-        echo "Smoke test container exited unexpectedly." >&2
+    curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/" >/dev/null
+    curl -fsS "http://127.0.0.1:${HOST_API_PORT}/api/v1/config/" >/dev/null
+    curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/openmemory-api/api/v1/config/" >/dev/null
+    curl -fsS "http://127.0.0.1:${HOST_QDRANT_PORT}/readyz" >/dev/null
+
+    if ! docker exec "${CONTAINER_NAME}" sh -lc 'test -f /mem0/storage/openmemory.db'; then
         dump_failure_state
         exit 1
     fi
-    sleep "${POLL_INTERVAL_SECONDS}"
-done
+}
 
-curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/" >/dev/null
-curl -fsS "http://127.0.0.1:${HOST_API_PORT}/api/v1/config/" >/dev/null
-curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/openmemory-api/api/v1/config/" >/dev/null
-curl -fsS "http://127.0.0.1:${HOST_QDRANT_PORT}/readyz" >/dev/null
+wait_for_ready
+verify_runtime
 
-if ! docker exec "${CONTAINER_NAME}" sh -lc 'test -f /mem0/storage/openmemory.db'; then
-    dump_failure_state
-    exit 1
-fi
+docker restart "${CONTAINER_NAME}" >/dev/null
+wait_for_ready
+verify_runtime

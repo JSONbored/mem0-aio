@@ -7,8 +7,10 @@ Mem0 / OpenMemory packaged as a true All-In-One Unraid container.
 ## What This Repo Ships
 
 - A single-container `ghcr.io/jsonbored/mem0-aio:latest` image
+- Explicit image tags matching the pinned upstream release, plus `latest` and `sha-...`
 - An Unraid CA template at [mem0-aio.xml](/tmp/mem0-aio/mem0-aio.xml)
 - A local smoke test at [scripts/smoke-test.sh](/tmp/mem0-aio/scripts/smoke-test.sh)
+- Upstream release monitoring via [upstream.toml](/tmp/mem0-aio/upstream.toml) and [scripts/check-upstream.py](/tmp/mem0-aio/scripts/check-upstream.py)
 - Automated `awesome-unraid` sync for the XML and icon
 
 ## Included Services
@@ -43,13 +45,14 @@ That fallback is only for startup stability. Real memory generation still needs 
 
 ## Validation
 
-Local validation completed on March 28, 2026:
+Local validation completed on March 29, 2026:
 
 - native `linux/arm64` Docker build succeeded
 - local smoke test passed end-to-end on `linux/arm64`
 - explicit `linux/amd64` buildx image build succeeded
 - explicit `linux/amd64` smoke test passed end-to-end
-- startup issues fixed for s6 service wiring, Qdrant runtime libraries, UI proxying, and first-boot provider fallback
+- restart and persistence smoke coverage added
+- workflow hardening added with pinned action SHAs, dependency review, and upstream release tracking
 
 ## Support
 
