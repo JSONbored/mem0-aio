@@ -46,6 +46,28 @@ def git_tags() -> list[str]:
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 
+def latest_release_tag(dockerfile: pathlib.Path, upstream: pathlib.Path) -> str | None:
+    upstream_version = read_upstream_version(dockerfile, upstream)
+    pattern = re.compile(rf"^{re.escape(upstream_version)}-aio\.(\d+)$")
+    matches: list[tuple[int, str]] = []
+    for tag in git_tags():
+        match = pattern.match(tag)
+        if match:
+            matches.append((int(match.group(1)), tag))
+    if not matches:
+        return None
+    matches.sort(key=lambda item: item[0])
+    return matches[-1][1]
+
+
+def has_unreleased_changes(dockerfile: pathlib.Path, upstream: pathlib.Path) -> bool:
+    latest_tag = latest_release_tag(dockerfile, upstream)
+    if latest_tag is None:
+        return True
+    output = subprocess.check_output(["git", "log", "--format=%s", f"{latest_tag}..HEAD"], cwd=ROOT, text=True)
+    return any(line.strip() for line in output.splitlines())
+
+
 def next_release_version(dockerfile: pathlib.Path, upstream: pathlib.Path) -> str:
     upstream_version = read_upstream_version(dockerfile, upstream)
     pattern = re.compile(rf"^{re.escape(upstream_version)}-aio\.(\d+)$")
@@ -98,6 +120,9 @@ def main() -> None:
     next_parser = subparsers.add_parser("next-version")
     next_parser.add_argument("--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE)
     next_parser.add_argument("--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM)
+    changes_parser = subparsers.add_parser("has-unreleased-changes")
+    changes_parser.add_argument("--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE)
+    changes_parser.add_argument("--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM)
     latest_parser = subparsers.add_parser("latest-changelog-version")
     latest_parser.add_argument("--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG)
     notes_parser = subparsers.add_parser("extract-release-notes")
@@ -108,6 +133,8 @@ def main() -> None:
         print(read_upstream_version(args.dockerfile, args.upstream_config))
     elif args.command == "next-version":
         print(next_release_version(args.dockerfile, args.upstream_config))
+    elif args.command == "has-unreleased-changes":
+        print("true" if has_unreleased_changes(args.dockerfile, args.upstream_config) else "false")
     elif args.command == "latest-changelog-version":
         print(latest_changelog_version(args.changelog))
     else:
