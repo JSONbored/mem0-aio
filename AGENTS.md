@@ -1,29 +1,40 @@
-# mem0-aio Agent Notes
+# AGENTS.md
 
-`mem0-aio` packages OpenMemory / Mem0 as a single Unraid container with an embedded Qdrant vector store.
+This repository is part of a broader portfolio of Unraid-first AIO projects.
 
-## Runtime Shape
+## Repository intent
 
-- OpenMemory web UI
-- OpenMemory API / MCP service
-- Internal Qdrant for vector storage
-- Same-origin UI-to-API default flow for simple Unraid installs
+- This repo packages an opinionated, beginner-friendly Unraid AIO deployment.
+- Default behavior should optimize for a reliable first boot on Unraid.
+- Advanced users should retain escape hatches where supported.
 
-## Important Behavior
+## Engineering expectations
 
-- The vendored `openmemory` submodule is part of the upstream tracking story here.
-- `upstream.toml` uses `submodule_path = "openmemory"`.
-- Beginner installs should work with internal Qdrant by default.
-- A placeholder `OPENAI_API_KEY` fallback exists only to keep startup stable; real memory generation still needs a valid provider.
+- Prefer consistency with `unraid-aio-template` over one-off repo behavior.
+- Keep CI and release behavior aligned with the rest of the AIO fleet.
+- Respect protected branches and use PR-based automation for external sync flows.
+- Favor operational clarity over cleverness.
 
-## CI And Publish Policy
+## Release model
 
-- Validation and smoke tests should run on PRs and branch pushes.
-- Publish should happen only from the default branch.
-- GHCR image naming must stay lowercase.
+- Container packages publish automatically from `main`.
+- Formal changelog updates and GitHub Releases are release-driven.
+- Releases use `upstream version + aio revision`, for example `v1.0.9-aio.1`.
+- Keep changelog-friendly Conventional Commit titles and PR titles.
 
-## What To Preserve
+## Unraid expectations
 
-- Keep the browser experience single-origin by default.
-- Keep Qdrant internal unless a user explicitly overrides storage strategy.
-- Smoke tests should validate restart and persistence, not just the first boot.
+- Unraid-facing XML/icon assets should stay aligned with `awesome-unraid`.
+- User-facing metadata should remain accurate:
+  - `Project`
+  - `Support`
+  - `TemplateURL`
+  - `Icon`
+  - `Overview`
+  - `Category`
+
+## Documentation expectations
+
+- Be explicit about operational tradeoffs.
+- Do not imply the AIO model removes inherent complexity from the upstream software.
+- Keep beginner defaults simple, but document power-user override paths where they exist.

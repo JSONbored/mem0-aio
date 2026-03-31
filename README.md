@@ -54,6 +54,14 @@ Local validation completed on March 29, 2026:
 - restart and persistence smoke coverage added
 - workflow hardening added with pinned action SHAs, dependency review, and upstream release tracking
 
+## Releases
+
+`mem0-aio` uses upstream-version-plus-AIO-revision releases such as `v1.0.9-aio.1`.
+
+Every `main` build publishes `latest`, the exact pinned upstream version, an explicit packaging line tag, and `sha-<commit>`.
+
+See [docs/releases.md](/Users/shadowbook/Documents/mem0-aio/docs/releases.md) for the release workflow details.
+
 ## Support
 
 - Issues: [JSONbored/mem0-aio issues](https://github.com/JSONbored/mem0-aio/issues)
