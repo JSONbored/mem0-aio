@@ -55,6 +55,7 @@ jobs:
       build_related: ${{ steps.filter.outputs.build_related }}
       template_assets_related: ${{ steps.filter.outputs.template_assets_related }}
       renovate_related: ${{ steps.filter.outputs.renovate_related }}
+      tooling_related: ${{ steps.filter.outputs.tooling_related }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -75,6 +76,7 @@ jobs:
             echo "build_related=true" >> "${GITHUB_OUTPUT}"
             echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
             echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+            echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
@@ -91,6 +93,7 @@ jobs:
             echo "build_related=true" >> "${GITHUB_OUTPUT}"
             echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
             echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+            echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
@@ -100,6 +103,7 @@ jobs:
               echo "build_related=true" >> "${GITHUB_OUTPUT}"
               echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
               echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+              echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
               exit 0
             fi
           else
@@ -108,6 +112,7 @@ jobs:
               echo "build_related=true" >> "${GITHUB_OUTPUT}"
               echo "template_assets_related=true" >> "${GITHUB_OUTPUT}"
               echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
+              echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
               exit 0
             fi
           fi
@@ -117,21 +122,21 @@ jobs:
           build_related=false
           template_assets_related=false
           renovate_related=false
+          tooling_related=false
 
           while IFS= read -r path; do
             [[ -z "${path}" ]] && continue
             case "${path}" in
-              Dockerfile|upstream.toml|rootfs/*|scripts/*|openmemory/*)
+              Dockerfile|upstream.toml|rootfs/*|openmemory/*)
                 build_related=true
                 ;;
               *.xml|assets/*)
                 template_assets_related=true
                 ;;
-              renovate.json)
-                renovate_related=true
+              scripts/*|.github/workflows/*)
+                tooling_related=true
                 ;;
-              .github/workflows/*)
-                build_related=true
+              renovate.json)
                 renovate_related=true
                 ;;
             esac
@@ -140,10 +145,11 @@ jobs:
           echo "build_related=${build_related}" >> "${GITHUB_OUTPUT}"
           echo "template_assets_related=${template_assets_related}" >> "${GITHUB_OUTPUT}"
           echo "renovate_related=${renovate_related}" >> "${GITHUB_OUTPUT}"
+          echo "tooling_related=${tooling_related}" >> "${GITHUB_OUTPUT}"
 
   validate-repo:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.template_assets_related == 'true' || needs.detect-changes.outputs.renovate_related == 'true' }}
+    if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.template_assets_related == 'true' || needs.detect-changes.outputs.renovate_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -154,7 +160,7 @@ jobs:
           submodules: recursive
 
       - name: Validate shell and python scripts
-        if: ${{ needs.detect-changes.outputs.build_related == 'true' }}
+        if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
         run: |
           bash -n scripts/smoke-test.sh
           find rootfs -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
