@@ -297,22 +297,38 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,format=long
+      - name: Compute image tags
+        id: prep
+        run: |
+          image="$(printf '%s' "${REGISTRY}/${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
+          sha_tag="${image}:sha-${GITHUB_SHA}"
+          raw_version="$(sed -n 's/^ARG UPSTREAM_VERSION=//p' Dockerfile | head -n1)"
+          upstream_version="${raw_version%%@*}"
+          aio_track="aio-v1"
+
+          {
+            echo "upstream_version=${upstream_version}"
+            echo "tags<<EOF"
+            echo "${image}:latest"
+            if [[ -n "${upstream_version}" ]]; then
+              echo "${image}:${upstream_version}"
+              echo "${image}:${upstream_version}-${aio_track}"
+            fi
+            echo "${sha_tag}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.prep.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/JSONbored/mem0-aio
+            org.opencontainers.image.title=mem0-aio
+            org.opencontainers.image.version=${{ steps.prep.outputs.upstream_version || '' }}
+            io.jsonbored.upstream.name=Mem0
           platforms: ${{ env.PUBLISH_PLATFORMS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
