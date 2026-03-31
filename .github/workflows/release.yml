@@ -1,0 +1,96 @@
+name: Release / mem0-aio
+
+on:
+  workflow_dispatch:
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  prepare-release:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Install git-cliff
+        env:
+          GIT_CLIFF_VERSION: 2.12.0
+        run: |
+          archive="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSL -o "/tmp/${archive}" "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${archive}"
+          tar -xzf "/tmp/${archive}" -C /tmp
+          install "/tmp/git-cliff-${GIT_CLIFF_VERSION}/git-cliff" /usr/local/bin/git-cliff
+      - name: Compute release version
+        id: version
+        run: echo "release_version=$(python3 scripts/release.py next-version)" >> "${GITHUB_OUTPUT}"
+      - name: Generate changelog
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+        run: git-cliff --config cliff.toml --tag "${RELEASE_VERSION}" --output CHANGELOG.md
+      - name: Create release PR
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          commit-message: "chore(release): ${{ steps.version.outputs.release_version }}"
+          title: "chore(release): ${{ steps.version.outputs.release_version }}"
+          body: |
+            This PR prepares `${{ steps.version.outputs.release_version }}`.
+          branch: "release/${{ steps.version.outputs.release_version }}"
+          delete-branch: true
+
+  publish-release-on-merge:
+    if: "${{ github.event_name == 'pull_request_target' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main' && startsWith(github.event.pull_request.title, 'chore(release): ') }}"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout merge commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+      - name: Determine release version
+        id: version
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          release_version="${PR_TITLE#chore(release): }"
+          echo "release_version=${release_version}" >> "${GITHUB_OUTPUT}"
+          test "$(python3 scripts/release.py latest-changelog-version)" = "${release_version}"
+      - name: Extract release notes
+        id: notes
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+        run: |
+          {
+            echo "release_notes<<EOF"
+            python3 scripts/release.py extract-release-notes "${RELEASE_VERSION}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+      - name: Create Git tag if missing
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          if git rev-parse "${RELEASE_VERSION}" >/dev/null 2>&1; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${RELEASE_VERSION}" "${MERGE_SHA}"
+          git push origin "${RELEASE_VERSION}"
+      - name: Publish GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.release_notes }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          if gh release view "${RELEASE_VERSION}" >/dev/null 2>&1; then exit 0; fi
+          notes_file="$(mktemp)"
+          printf '%s\n' "${RELEASE_NOTES}" > "${notes_file}"
+          gh release create "${RELEASE_VERSION}" --title "${RELEASE_VERSION}" --notes-file "${notes_file}" --target "${MERGE_SHA}"
