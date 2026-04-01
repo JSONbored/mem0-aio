@@ -11,6 +11,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_CHANGELOG = ROOT / "CHANGELOG.md"
 DEFAULT_DOCKERFILE = ROOT / "Dockerfile"
 DEFAULT_UPSTREAM = ROOT / "upstream.toml"
+AIO_TAG_PATTERN = "*-aio.*"
 
 
 def load_upstream_version_key(path: pathlib.Path) -> str:
@@ -46,6 +47,19 @@ def git_tags() -> list[str]:
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 
+def latest_aio_release_tag() -> str | None:
+    completed = subprocess.run(
+        ["git", "describe", "--tags", "--abbrev=0", "--match", AIO_TAG_PATTERN, "HEAD"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        return None
+    tag = completed.stdout.strip()
+    return tag or None
+
+
 def latest_release_tag(dockerfile: pathlib.Path, upstream: pathlib.Path) -> str | None:
     upstream_version = read_upstream_version(dockerfile, upstream)
     pattern = re.compile(rf"^{re.escape(upstream_version)}-aio\.(\d+)$")
@@ -61,7 +75,7 @@ def latest_release_tag(dockerfile: pathlib.Path, upstream: pathlib.Path) -> str 
 
 
 def has_unreleased_changes(dockerfile: pathlib.Path, upstream: pathlib.Path) -> bool:
-    latest_tag = latest_release_tag(dockerfile, upstream)
+    latest_tag = latest_aio_release_tag()
     if latest_tag is None:
         return True
     output = subprocess.check_output(["git", "log", "--format=%s", f"{latest_tag}..HEAD"], cwd=ROOT, text=True)
@@ -111,6 +125,24 @@ def extract_release_notes(version: str, changelog: pathlib.Path) -> str:
     return notes
 
 
+def find_release_commit(version: str) -> str:
+    exact = f"chore(release): {version}"
+    with_suffix = re.compile(rf"^{re.escape(exact)} \(#\d+\)$")
+
+    output = subprocess.check_output(["git", "log", "--format=%H\t%s", "HEAD"], cwd=ROOT, text=True)
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        sha, subject = line.split("\t", 1)
+        if subject == exact or with_suffix.match(subject):
+            return sha
+
+    raise SystemExit(
+        f"Unable to find a merged release commit for {version} on main. "
+        f"Expected '{exact}' or '{exact} (#123)'."
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Release helpers for AIO repos.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -123,11 +155,14 @@ def main() -> None:
     changes_parser = subparsers.add_parser("has-unreleased-changes")
     changes_parser.add_argument("--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE)
     changes_parser.add_argument("--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM)
+    subparsers.add_parser("latest-aio-tag")
     latest_parser = subparsers.add_parser("latest-changelog-version")
     latest_parser.add_argument("--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG)
     notes_parser = subparsers.add_parser("extract-release-notes")
     notes_parser.add_argument("version")
     notes_parser.add_argument("--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG)
+    commit_parser = subparsers.add_parser("find-release-commit")
+    commit_parser.add_argument("version")
     args = parser.parse_args()
     if args.command == "upstream-version":
         print(read_upstream_version(args.dockerfile, args.upstream_config))
@@ -135,8 +170,14 @@ def main() -> None:
         print(next_release_version(args.dockerfile, args.upstream_config))
     elif args.command == "has-unreleased-changes":
         print("true" if has_unreleased_changes(args.dockerfile, args.upstream_config) else "false")
+    elif args.command == "latest-aio-tag":
+        latest_tag = latest_aio_release_tag()
+        if latest_tag:
+            print(latest_tag)
     elif args.command == "latest-changelog-version":
         print(latest_changelog_version(args.changelog))
+    elif args.command == "find-release-commit":
+        print(find_release_commit(args.version))
     else:
         print(extract_release_notes(args.version, args.changelog))
 
