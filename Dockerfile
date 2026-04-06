@@ -40,7 +40,7 @@ ENV NEXT_PUBLIC_API_URL=/openmemory-api
 ENV NEXT_PUBLIC_USER_ID=default_user
 RUN pnpm build || npm run build
 
-ARG UPSTREAM_VERSION=v1.0.9
+ARG UPSTREAM_VERSION=v1.0.10
 FROM qdrant/qdrant@sha256:94728574965d17c6485dd361aa3c0818b325b9016dac5ea6afec7b4b2700865f AS qdrant-bin
 
 FROM ubuntu:24.04@sha256:186072bba1b2f436cbb91ef2567abca677337cfc786c86e107d25b7072feef0c
