@@ -1,77 +1,92 @@
 # mem0-aio
 
-Mem0 / OpenMemory packaged as a true All-In-One Unraid container.
+<div align="center">
 
-`mem0-aio` bundles the OpenMemory API, Next.js UI, and Qdrant into a single container with persistent storage and a beginner-first default setup. The UI is prewired to talk to the API over the same published web port, so a normal Unraid install does not need custom Docker networking or multiple sidecars.
+<img src="https://socialify.git.ci/JSONbored/mem0-aio/image?custom_description=All-in-One+Unraid+container+for+Mem0+OpenMemory.+Run+the+UI%2C+API%2FMCP+server%2C+and+vector+store+with+beginner-first+defaults+while+still+exposing+the+real+self-hosted+runtime+surface.&custom_language=Dockerfile&description=1&font=Raleway&forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F115636655%3Fs%3D200%26v%3D4&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Light" alt="mem0-aio" width="640" height="320" />
 
-## What This Repo Ships
+</div>
 
-- A single-container `ghcr.io/jsonbored/mem0-aio:latest` image
-- Explicit image tags matching the pinned upstream release, plus `latest` and `sha-...`
-- An Unraid CA template at [mem0-aio.xml](/tmp/mem0-aio/mem0-aio.xml)
-- A local smoke test at [scripts/smoke-test.sh](/tmp/mem0-aio/scripts/smoke-test.sh)
-- Upstream release monitoring via [upstream.toml](/tmp/mem0-aio/upstream.toml) and [scripts/check-upstream.py](/tmp/mem0-aio/scripts/check-upstream.py)
-- Automated `awesome-unraid` sync for the XML and icon
+---
 
-## Included Services
+An Unraid-first, single-container deployment of [Mem0 OpenMemory](https://github.com/mem0ai/mem0/tree/main/openmemory) for people who want the easiest reliable self-hosted install without manually wiring a separate vector database on day one.
 
-- OpenMemory Web UI on port `3000`
+`mem0-aio` keeps the critical first-boot dependency bundled: Qdrant plus persistent local storage. The wrapper is opinionated for a predictable beginner install, but it does not hide the real tradeoffs: OpenMemory still needs a valid model/provider configuration to do useful work, external vector backends and hosted model endpoints still need operator knowledge, and exposing the direct MCP/API port is a deliberate security decision rather than a default requirement.
+
+## What This Image Includes
+
+- OpenMemory web UI on port `3000`
 - OpenMemory API / MCP server on port `8765`
-- Embedded Qdrant vector store on port `6333` inside the container
+- Embedded Qdrant vector store
+- Persistent appdata storage for SQLite and Qdrant state
+- Upstream backup/export helper scripts bundled into the image
+- Same-origin UI routing to the API so a standard Unraid install does not need separate browser-facing API networking
+- Unraid CA template at [mem0-aio.xml](mem0-aio.xml)
 
-## Beginner Defaults
+## Beginner Install
 
-- Single published Web UI by default
-- Same-origin API proxy so the browser does not need a separate API hostname
-- Persistent memory storage in `/mem0/storage`
-- Internal Qdrant by default
-- Placeholder `OPENAI_API_KEY` fallback so first boot succeeds even before the user chooses a real provider
+If you want the simplest supported path:
 
-That fallback is only for startup stability. Real memory generation still needs a valid provider configuration, either through OpenAI-compatible credentials or by switching to a local provider such as Ollama.
+1. Install the Unraid template.
+2. Leave the default appdata path in place.
+3. Optionally set `OPENAI_API_KEY` if you want OpenAI immediately.
+4. Start the container.
+5. Open the web UI on port `3000`.
+6. If you did not set OpenAI, finish provider setup in the UI for Ollama or another upstream-supported provider.
 
-## Quick Start
+Leaving `OPENAI_API_KEY` blank is supported for first boot. It only keeps the container usable enough to finish setup. Real memory generation still requires a working LLM and embedder configuration.
 
-1. Install from the Unraid template.
-2. Set `OPENAI_API_KEY` if you want OpenAI as the default provider.
-3. If you prefer local inference, leave `OPENAI_API_KEY` blank, start the container, then configure Ollama or another provider from the OpenMemory UI.
-4. Open the Web UI and finish provider configuration under settings.
+## Power User Surface
 
-## Power User Notes
+This repo is deliberately not a stripped-down wrapper. The template now tracks the practical OpenMemory self-hosted environment surface exposed by upstream source and docs, plus AIO defaults for the bundled SQLite + Qdrant path. In Advanced View you can:
 
-- Default browser API traffic uses `/openmemory-api` through the same published UI port.
-- You can still publish port `8765` if you want direct MCP/API access from external clients.
-- You can override `DATABASE_URL`, `QDRANT_HOST`, `QDRANT_PORT`, `LLM_PROVIDER`, `LLM_MODEL`, `EMBEDDER_PROVIDER`, and related variables for non-default setups.
-- See [docs/power-user.md](/tmp/mem0-aio/docs/power-user.md) for the advanced behavior that matters on Unraid.
+- point OpenMemory at Ollama, Anthropic, Groq, Together, DeepSeek, Azure OpenAI, Bedrock-compatible providers, and other upstream-supported provider values
+- override both LLM and embedder providers, models, API keys, and base URLs independently
+- move vector storage to Chroma, Weaviate, Redis, pgvector, Milvus, Elasticsearch, OpenSearch, or FAISS
+- keep using bundled Qdrant privately by default with telemetry disabled unless you explicitly re-enable it
+- keep the bundled internal defaults for the easiest install while still exposing the upstream env surface for power users
+
+The wrapper still defaults to the internal bundled storage path so new Unraid users are not forced into extra services on day one.
+
+## Runtime Notes
+
+- As of `2026-04-17`, upstream Mem0 has a newer stable release than the original wrapper baseline; this repo is being moved to the current stable `v2.0.0` line rather than staying on the older `v1.0.x` line.
+- The direct API / MCP port is optional for normal browser use because the UI proxies to the API over the same published web port.
+- The embedded Qdrant service is intentionally bundled because that is the critical first-boot dependency for the AIO path. External vector store support remains optional advanced configuration.
+- If you expose OpenMemory beyond your LAN, treat the direct MCP/API surface and your model/provider credentials as real attack surface.
+
+## Publishing and Releases
+
+- Wrapper releases use the upstream version plus an AIO revision, such as `v2.0.0-aio.1`.
+- The repo monitors upstream releases through [upstream.toml](upstream.toml) and [scripts/check-upstream.py](scripts/check-upstream.py).
+- Release notes are generated with `git-cliff`.
+- The Unraid template `<Changes>` block is synced from `CHANGELOG.md` during release preparation.
+- `main` publishes `latest`, the pinned upstream version tag, an explicit AIO packaging line tag, and `sha-<commit>`.
+- When Docker Hub credentials are configured, the same publish flow pushes Docker Hub tags in parallel with GHCR so the CA template can read Docker Hub metadata.
+
+See [docs/releases.md](docs/releases.md) for the release workflow details.
 
 ## Validation
 
-Local validation completed on March 29, 2026:
+Local validation in this repo is built around:
 
-- native `linux/arm64` Docker build succeeded
-- local smoke test passed end-to-end on `linux/arm64`
-- explicit `linux/amd64` buildx image build succeeded
-- explicit `linux/amd64` smoke test passed end-to-end
-- restart and persistence smoke coverage added
-- workflow hardening added with pinned action SHAs, dependency review, and upstream release tracking
-
-## Releases
-
-`mem0-aio` uses upstream-version-plus-AIO-revision releases such as `v1.0.9-aio.1`.
-
-Every `main` build publishes `latest`, the exact pinned upstream version, an explicit packaging line tag, and `sha-<commit>`.
-
-See [docs/releases.md](/Users/shadowbook/Documents/mem0-aio/docs/releases.md) for the release workflow details.
+- XML validation for the audited template surface
+- shell and Python syntax checks
+- local Docker build and smoke coverage
+- restart and persistence checks for the embedded OpenMemory stack
 
 ## Support
 
-- Issues: [JSONbored/mem0-aio issues](https://github.com/JSONbored/mem0-aio/issues)
+- Repo issues: [JSONbored/mem0-aio issues](https://github.com/JSONbored/mem0-aio/issues)
 - Upstream app: [mem0ai/mem0](https://github.com/mem0ai/mem0)
+- Official OpenMemory docs: [docs.mem0.ai](https://docs.mem0.ai/openmemory/quickstart)
 
 ## Funding
 
 If this work saves you time, support it here:
 
 - [GitHub Sponsors](https://github.com/sponsors/JSONbored)
+- [Ko-fi](https://ko-fi.com/jsonbored)
+- [Buy Me a Coffee](https://buymeacoffee.com/jsonbored)
 
 ## Star History
 

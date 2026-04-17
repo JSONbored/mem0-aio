@@ -13,4 +13,4 @@ for _ in $(seq 1 60); do
 done
 
 cd /app/ui
-exec ./entrypoint.sh npm run start -- --hostname 0.0.0.0 --port 3000
+exec ./entrypoint.sh node server.js
