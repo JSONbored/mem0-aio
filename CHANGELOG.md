@@ -1,6 +1,19 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [v2.0.0-aio.1](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.1) - 2026-04-17
+### Documentation
+- Update Socialify banner by @JSONbored
+
+
+### Features
+- Align mem0-aio with OpenMemory v2.0.0 by @JSONbored
+
+
+### Fixes
+- Make releases manual and gate heavy workflows by @JSONbored
+- Harden publish and changelog range by @JSONbored
+
 ## [v1.0.9-aio.1](https://github.com/JSONbored/mem0-aio/releases/tag/v1.0.9-aio.1) - 2026-04-17
 ### Dependency Updates
 - Update non-major infrastructure updates by @renovate[bot]
