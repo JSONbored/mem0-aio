@@ -95,16 +95,21 @@ def next_release_version(dockerfile: pathlib.Path, upstream: pathlib.Path) -> st
 
 
 def latest_changelog_version(changelog: pathlib.Path) -> str:
-    pattern = re.compile(r"^##\s+([^\s]+)")
+    pattern = re.compile(r"^##\s+(?:\[([^\]]+)\]\([^)]+\)|([^\s]+))")
     for line in changelog.read_text().splitlines():
         match = pattern.match(line.strip())
-        if match and match.group(1) != "Unreleased":
-            return match.group(1)
+        if not match:
+            continue
+        version = match.group(1) or match.group(2)
+        if version != "Unreleased":
+            return version
     raise SystemExit(f"Unable to find a released version heading in {changelog}")
 
 
 def extract_release_notes(version: str, changelog: pathlib.Path) -> str:
-    heading = re.compile(rf"^##\s+{re.escape(version)}(?:\s+-\s+.+)?$")
+    heading = re.compile(
+        rf"^##\s+(?:\[{re.escape(version)}\]\([^)]+\)|{re.escape(version)})(?:\s+-\s+.+)?$"
+    )
     next_heading = re.compile(r"^##\s+")
     lines = changelog.read_text().splitlines()
     start = None

@@ -44,6 +44,7 @@ dump_failure_state() {
 
 wait_for_ready() {
     local attempts
+    local container_status
     attempts=$(( READY_TIMEOUT_SECONDS / POLL_INTERVAL_SECONDS ))
     for _ in $(seq 1 "${attempts}"); do
         if curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/" >/dev/null 2>&1 && \
@@ -51,7 +52,9 @@ wait_for_ready() {
            curl -fsS "http://127.0.0.1:${HOST_QDRANT_PORT}/readyz" >/dev/null 2>&1; then
             return 0
         fi
-        if ! docker ps --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"; then
+
+        container_status="$(docker inspect -f '{{.State.Status}}' "${CONTAINER_NAME}" 2>/dev/null || true)"
+        if [ -z "${container_status}" ] || [ "${container_status}" = "exited" ] || [ "${container_status}" = "dead" ]; then
             echo "Smoke test container exited unexpectedly." >&2
             dump_failure_state
             exit 1
@@ -72,7 +75,7 @@ verify_runtime() {
     fi
     curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/" >/dev/null
     curl -fsS "http://127.0.0.1:${HOST_API_PORT}/api/v1/config/" >/dev/null
-    curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/openmemory-api/api/v1/config/" >/dev/null
+    curl -fsS "http://127.0.0.1:${HOST_UI_PORT}/openmemory-api/api/v1/config" >/dev/null
     curl -fsS "http://127.0.0.1:${HOST_QDRANT_PORT}/readyz" >/dev/null
 
     if ! docker exec "${CONTAINER_NAME}" sh -lc 'test -f /mem0/storage/openmemory.db'; then

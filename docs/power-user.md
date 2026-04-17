@@ -18,15 +18,19 @@ There are two ways to configure providers:
 Useful variables:
 
 - `OPENAI_API_KEY`
+- `API_KEY` (legacy alias for older `env:API_KEY` examples)
 - `LLM_PROVIDER`
 - `LLM_MODEL`
 - `LLM_API_KEY`
 - `LLM_BASE_URL`
 - `OLLAMA_BASE_URL`
+- `OLLAMA_HOST`
 - `EMBEDDER_PROVIDER`
 - `EMBEDDER_MODEL`
 - `EMBEDDER_API_KEY`
 - `EMBEDDER_BASE_URL`
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_USER_ID`
 
 Examples:
 
@@ -49,7 +53,27 @@ Examples:
 These are optional and only for non-default installs:
 
 - `DATABASE_URL`
+- `QDRANT__TELEMETRY_DISABLED`
 - `QDRANT_HOST`
 - `QDRANT_PORT`
+- `CHROMA_HOST` / `CHROMA_PORT`
+- `WEAVIATE_CLUSTER_URL` or `WEAVIATE_HOST` / `WEAVIATE_PORT`
+- `REDIS_URL`
+- `PG_HOST` / `PG_PORT` / `PG_DB` / `PG_USER` / `PG_PASSWORD`
+- `MILVUS_HOST` / `MILVUS_PORT` / `MILVUS_TOKEN` / `MILVUS_DB_NAME`
+- `ELASTICSEARCH_HOST` / `ELASTICSEARCH_PORT` / `ELASTICSEARCH_USER` / `ELASTICSEARCH_PASSWORD`
+- `OPENSEARCH_HOST` / `OPENSEARCH_PORT`
+- `FAISS_PATH`
+
+## Export Helper
+
+The image now carries upstream's `backup-scripts/export_openmemory.sh` helper under `/app/backup-scripts/export_openmemory.sh`.
+
+Optional expert-only export filter env vars:
+
+- `EXPORT_USER_ID`
+- `EXPORT_APP_ID`
+- `EXPORT_FROM_DATE`
+- `EXPORT_TO_DATE`
 
 If you override those, you are intentionally stepping outside the normal single-container AIO path.

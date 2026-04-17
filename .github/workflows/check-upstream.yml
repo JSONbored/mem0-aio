@@ -58,7 +58,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add Dockerfile openmemory
-          git commit -m "chore: bump upstream to ${{ steps.upstream.outputs.latest_version }}"
+          git commit -m "chore(deps): bump upstream to ${{ steps.upstream.outputs.latest_version }}"
 
       - name: Push update branch
         if: ${{ steps.upstream.outputs.updates_available == 'true' && steps.upstream.outputs.strategy == 'pr' }}
@@ -85,13 +85,13 @@ jobs:
           existing_pr="$(gh pr list --head "codex/upstream-${{ steps.upstream.outputs.latest_version }}" --base main --json number --jq '.[0].number')"
           if [[ -n "${existing_pr}" ]]; then
             gh pr edit "${existing_pr}" \
-              --title "chore: bump upstream to ${{ steps.upstream.outputs.latest_version }}" \
+              --title "chore(deps): bump upstream to ${{ steps.upstream.outputs.latest_version }}" \
               --body-file "${body_file}"
           else
             gh pr create \
               --base main \
               --head "codex/upstream-${{ steps.upstream.outputs.latest_version }}" \
-              --title "chore: bump upstream to ${{ steps.upstream.outputs.latest_version }}" \
+              --title "chore(deps): bump upstream to ${{ steps.upstream.outputs.latest_version }}" \
               --body-file "${body_file}"
           fi
 
