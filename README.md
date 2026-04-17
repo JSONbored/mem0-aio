@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://socialify.git.ci/JSONbored/mem0-aio/image?custom_description=All-in-One+Unraid+container+for+Mem0+OpenMemory.+Run+the+UI%2C+API%2FMCP+server%2C+and+vector+store+with+beginner-first+defaults+while+still+exposing+the+real+self-hosted+runtime+surface.&custom_language=Dockerfile&description=1&font=Raleway&forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F115636655%3Fs%3D200%26v%3D4&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Light" alt="mem0-aio" width="640" height="320" />
+![mem0-aio](https://socialify.git.ci/JSONbored/mem0-aio/image?custom_description=Unraid+CA+AIO+template+and+Docker+image+for+Mem0+%28OpenMemory%29%2C+an+AI+memory+retention+layer.&custom_language=Dockerfile&description=1&font=Raleway&forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F137054526%3Fs%3D200%26v%3D4&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Light)
 
 </div>
 
