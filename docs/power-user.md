@@ -29,6 +29,7 @@ Useful variables:
 - `EMBEDDER_MODEL`
 - `EMBEDDER_API_KEY`
 - `EMBEDDER_BASE_URL`
+- `EMBEDDER_DIMENSIONS`
 - `NEXT_PUBLIC_API_URL`
 - `NEXT_PUBLIC_USER_ID`
 
@@ -37,11 +38,22 @@ Examples:
 - OpenAI default:
   - set `OPENAI_API_KEY`
 - Local Ollama:
-  - set `LLM_PROVIDER=ollama`
-  - set `LLM_MODEL=llama3.1:latest`
-  - set `EMBEDDER_PROVIDER=ollama`
-  - set `EMBEDDER_MODEL=nomic-embed-text`
   - set `OLLAMA_BASE_URL=http://host.docker.internal:11434`
+  - set `LLM_MODEL` to a chat model you already have pulled
+  - set `EMBEDDER_MODEL=nomic-embed-text` or another embedding model you already have pulled
+  - usually leave `EMBEDDER_DIMENSIONS` unset so the wrapper can auto-detect it; only set it if your embedder is custom or probing is unavailable
+  - leave `LLM_PROVIDER` and `EMBEDDER_PROVIDER` unset unless you want to override the wrapper's automatic Ollama defaulting
+- Auth-protected OpenAI-compatible Ollama proxy:
+  - set `LLM_PROVIDER=openai`
+  - set `EMBEDDER_PROVIDER=openai`
+  - set `LLM_BASE_URL=https://your-proxy.example/v1`
+  - set `EMBEDDER_BASE_URL=https://your-proxy.example/v1`
+  - set `LLM_API_KEY` and `EMBEDDER_API_KEY` if your proxy requires auth
+
+Notes:
+
+- Native Ollama provider support uses the root Ollama API URL, not a `/v1` path.
+- The native Ollama path in the upstream Mem0 client does not currently expose custom auth headers. If your reverse proxy requires auth, prefer the OpenAI-compatible base URL path instead.
 
 ## Storage
 
@@ -61,8 +73,8 @@ These are optional and only for non-default installs:
 - `REDIS_URL`
 - `PG_HOST` / `PG_PORT` / `PG_DB` / `PG_USER` / `PG_PASSWORD`
 - `MILVUS_HOST` / `MILVUS_PORT` / `MILVUS_TOKEN` / `MILVUS_DB_NAME`
-- `ELASTICSEARCH_HOST` / `ELASTICSEARCH_PORT` / `ELASTICSEARCH_USER` / `ELASTICSEARCH_PASSWORD`
-- `OPENSEARCH_HOST` / `OPENSEARCH_PORT`
+- `ELASTICSEARCH_HOST` / `ELASTICSEARCH_PORT` / `ELASTICSEARCH_USER` / `ELASTICSEARCH_PASSWORD` / `ELASTICSEARCH_USE_SSL` / `ELASTICSEARCH_VERIFY_CERTS`
+- `OPENSEARCH_HOST` / `OPENSEARCH_PORT` / `OPENSEARCH_USER` / `OPENSEARCH_PASSWORD` / `OPENSEARCH_USE_SSL` / `OPENSEARCH_VERIFY_CERTS`
 - `FAISS_PATH`
 
 ## Export Helper

@@ -28,18 +28,24 @@ If you want the simplest supported path:
 
 1. Install the Unraid template.
 2. Leave the default appdata path in place.
-3. Optionally set `OPENAI_API_KEY` if you want OpenAI immediately.
-4. Start the container.
-5. Open the web UI on port `3000`.
-6. If you did not set OpenAI, finish provider setup in the UI for Ollama or another upstream-supported provider.
+3. Either set `OPENAI_API_KEY` for the hosted quick-start, or set `OLLAMA_BASE_URL` to your external native Ollama root URL for the normal local-LLM path.
+4. If you use Ollama, also set `LLM_MODEL` and `EMBEDDER_MODEL` to models you already have pulled on that server.
+5. Start the container.
+6. Open the web UI on port `3000`.
+7. If you need something more custom, finish provider configuration in the UI or use the advanced environment overrides.
 
-Leaving `OPENAI_API_KEY` blank is supported for first boot. It only keeps the container usable enough to finish setup. Real memory generation still requires a working LLM and embedder configuration.
+Leaving `OPENAI_API_KEY` blank is supported. The intended companion path is external Ollama, not bundled inference inside this image.
+
+When `OLLAMA_BASE_URL` is set and you do not explicitly override `LLM_PROVIDER` or `EMBEDDER_PROVIDER`, the wrapper now defaults both to `ollama` automatically.
+
+For normal Ollama installs, the wrapper now also auto-detects the embedding dimension it needs for Qdrant. If you use a custom embedder and auto-detection cannot determine the size, set `EMBEDDER_DIMENSIONS` explicitly in Advanced View.
 
 ## Power User Surface
 
 This repo is deliberately not a stripped-down wrapper. The template now tracks the practical OpenMemory self-hosted environment surface exposed by upstream source and docs, plus AIO defaults for the bundled SQLite + Qdrant path. In Advanced View you can:
 
 - point OpenMemory at Ollama, Anthropic, Groq, Together, DeepSeek, Azure OpenAI, Bedrock-compatible providers, and other upstream-supported provider values
+- use native Ollama root URLs for the normal homelab path, or OpenAI-compatible `/v1` base URLs for auth-protected reverse proxies
 - override both LLM and embedder providers, models, API keys, and base URLs independently
 - move vector storage to Chroma, Weaviate, Redis, pgvector, Milvus, Elasticsearch, OpenSearch, or FAISS
 - keep using bundled Qdrant privately by default with telemetry disabled unless you explicitly re-enable it
@@ -52,6 +58,9 @@ The wrapper still defaults to the internal bundled storage path so new Unraid us
 - As of `2026-04-17`, upstream Mem0 has a newer stable release than the original wrapper baseline; this repo is being moved to the current stable `v2.0.0` line rather than staying on the older `v1.0.x` line.
 - The direct API / MCP port is optional for normal browser use because the UI proxies to the API over the same published web port.
 - The embedded Qdrant service is intentionally bundled because that is the critical first-boot dependency for the AIO path. External vector store support remains optional advanced configuration.
+- Native Ollama provider support expects the root Ollama URL such as `http://host.docker.internal:11434`, not an OpenAI-compatible `/v1` path.
+- If your homelab front door adds auth and only exposes an OpenAI-style `/v1` endpoint, use the OpenAI-compatible base URL fields instead of the native Ollama provider path.
+- Elasticsearch/OpenSearch support is now wired for real external deployments, but those stacks usually need explicit auth and SSL choices. For Elasticsearch, the advanced template now exposes `ELASTICSEARCH_USE_SSL` and `ELASTICSEARCH_VERIFY_CERTS`. For OpenSearch, it now also exposes optional user/password plus `OPENSEARCH_USE_SSL` and `OPENSEARCH_VERIFY_CERTS`, with SSL defaulting to `true` to match modern secured nodes.
 - If you expose OpenMemory beyond your LAN, treat the direct MCP/API surface and your model/provider credentials as real attack surface.
 
 ## Publishing and Releases
