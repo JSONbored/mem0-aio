@@ -1,6 +1,16 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [v2.0.0-aio.2](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.2) - 2026-04-18
+### Fixes
+- Align healthcheck and template auto defaults by @JSONbored
+- Align provider auto mode and container healthcheck by @JSONbored
+- Point openmemory submodule to maintained fork by @JSONbored
+
+
+### Other Changes
+- Document Ollama and external backend setup by @JSONbored
+
 ## [v2.0.0-aio.1](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.1) - 2026-04-17
 ### Documentation
 - Update Socialify banner by @JSONbored
