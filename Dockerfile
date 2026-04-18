@@ -172,7 +172,7 @@ VOLUME ["/mem0/storage"]
 EXPOSE 3000 8765 6333
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
-  CMD curl -fsS http://127.0.0.1:3000/ >/dev/null || exit 1
+  CMD sh -lc 'IP=$(hostname -i | awk "{print \$1}"); curl -fsS "http://${IP}:3000/" >/dev/null || exit 1'
 
 # Start s6 init
 ENTRYPOINT ["/init"]
