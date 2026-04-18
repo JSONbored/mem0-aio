@@ -32,18 +32,15 @@
 - Native Ollama uses the root API URL such as [code]http://host.docker.internal:11434[/code], not an OpenAI-compatible [code]/v1[/code] path. If your reverse proxy adds auth and only exposes an OpenAI-style [code]/v1[/code] endpoint, use the advanced OpenAI-compatible base URL fields instead of the native Ollama provider path.&#xD;
 - The embedded Qdrant service is intentionally bundled because that is the critical dependency for the beginner AIO path.</Overview>
   <Changes>[b]Latest release[/b]&#xD;
-- v2.0.0-aio.1&#xD;
-[b]Documentation[/b]&#xD;
-- Update Socialify banner by @JSONbored&#xD;
-&#xD;
-&#xD;
-[b]Features[/b]&#xD;
-- Align mem0-aio with OpenMemory v2.0.0 by @JSONbored&#xD;
-&#xD;
-&#xD;
+- v2.0.0-aio.2&#xD;
 [b]Fixes[/b]&#xD;
-- Make releases manual and gate heavy workflows by @JSONbored&#xD;
-- Harden publish and changelog range by @JSONbored&#xD;
+- Align healthcheck and template auto defaults by @JSONbored&#xD;
+- Align provider auto mode and container healthcheck by @JSONbored&#xD;
+- Point openmemory submodule to maintained fork by @JSONbored&#xD;
+&#xD;
+&#xD;
+[b]Other Changes[/b]&#xD;
+- Document Ollama and external backend setup by @JSONbored&#xD;
 &#xD;
 Full changelog and release notes: [url=https://github.com/JSONbored/mem0-aio/releases]GitHub Releases[/url]</Changes>
   <Category>AI: Productivity: Tools:Utilities</Category>
