@@ -16,18 +16,20 @@
 &#xD;
 [b]Quick Install (Beginners)[/b]&#xD;
 1. Install the template and leave the default appdata path in place.&#xD;
-2. If you want OpenAI immediately, set [code]OPENAI_API_KEY[/code].&#xD;
-3. If you prefer local or alternate providers, you can leave the key blank, start the container, and then configure Ollama or another provider from the UI.&#xD;
-4. Open the Web UI, finish provider configuration, and optionally expose the direct API port only if you need external MCP clients.&#xD;
+2. For the fastest hosted path, set [code]OPENAI_API_KEY[/code].&#xD;
+3. For the normal local-LLM homelab path, set [code]OLLAMA_BASE_URL[/code] to your external Ollama root URL and set the Ollama chat/embed models you actually have pulled.&#xD;
+4. Start the container and open the Web UI. The wrapper will auto-default to Ollama when [code]OLLAMA_BASE_URL[/code] is set and no explicit provider overrides are supplied.&#xD;
+5. Only expose the direct API port if you need external MCP/API clients.&#xD;
 &#xD;
 [b]Power Users (Advanced View)[/b]&#xD;
 - Advanced View exposes the practical upstream OpenMemory self-hosted environment surface plus AIO defaults for the bundled SQLite + Qdrant path.&#xD;
-- You can keep the internal defaults, or point OpenMemory at Ollama, Anthropic, Groq, Together, DeepSeek, Azure OpenAI, Bedrock-compatible providers, and external vector backends such as pgvector, Weaviate, Redis, Milvus, Elasticsearch, OpenSearch, Chroma, or FAISS.&#xD;
+- You can keep the internal defaults, or point OpenMemory at native Ollama, OpenAI-compatible reverse proxies, Anthropic, Groq, Together, DeepSeek, Azure OpenAI, Bedrock-compatible providers, and external vector backends such as pgvector, Weaviate, Redis, Milvus, Elasticsearch, OpenSearch, Chroma, or FAISS.&#xD;
 - Leave defaults in place for the easiest install. Only set the overrides you actually need.&#xD;
 &#xD;
 [b]Important Notes[/b]&#xD;
 - This wrapper is meant to simplify first boot on Unraid, not remove the real complexity of model/provider credentials and external-service tuning.&#xD;
-- Actual memory generation still requires a valid LLM/embedder configuration. Leaving [code]OPENAI_API_KEY[/code] blank only keeps first boot simple; it does not make the app fully usable until you configure a provider.&#xD;
+- Actual memory generation still requires a valid LLM/embedder configuration. Leaving [code]OPENAI_API_KEY[/code] blank is fine if you are using Ollama, but you still need to provide a reachable Ollama endpoint and valid model names.&#xD;
+- Native Ollama uses the root API URL such as [code]http://host.docker.internal:11434[/code], not an OpenAI-compatible [code]/v1[/code] path. If your reverse proxy adds auth and only exposes an OpenAI-style [code]/v1[/code] endpoint, use the advanced OpenAI-compatible base URL fields instead of the native Ollama provider path.&#xD;
 - The embedded Qdrant service is intentionally bundled because that is the critical dependency for the beginner AIO path.</Overview>
   <Changes>[b]Latest release[/b]&#xD;
 - v2.0.0-aio.1&#xD;
@@ -49,7 +51,7 @@ Full changelog and release notes: [url=https://github.com/JSONbored/mem0-aio/rel
   <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/icons/mem0.jpeg</Icon>
   <ExtraSearchTerms>ai memory mcp llm openmemory qdrant ollama anthropic groq deepseek embeddings vector database</ExtraSearchTerms>
-  <Requires>OpenMemory still needs a valid LLM/embedder setup for actual memory generation. For the easiest first boot, keep the bundled storage defaults and add provider credentials only for the models you intend to use.</Requires>
+  <Requires>OpenMemory still needs a valid LLM/embedder setup for actual memory generation. For the easiest first boot, keep the bundled storage defaults and then either set OPENAI_API_KEY or point the app at a reachable native Ollama endpoint with chat and embedding models you already have pulled. If you use a nonstandard embedding model and auto-detection is not enough, set EMBEDDER_DIMENSIONS in Advanced View.</Requires>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>
@@ -84,23 +86,24 @@ Full changelog and release notes: [url=https://github.com/JSONbored/mem0-aio/rel
   <Config Name="API / MCP Port" Target="8765" Default="8765" Mode="tcp" Description="Direct API and MCP port. The UI works without exposing this externally, but external MCP clients may need it." Type="Port" Display="advanced" Required="false" Mask="false">8765</Config>
   <Config Name="AppData - OpenMemory Storage" Target="/mem0/storage" Default="/mnt/user/appdata/mem0-aio/storage" Mode="rw" Description="Persistent storage for the SQLite database, embedded Qdrant data, and AIO state." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/mem0-aio/storage</Config>
 
-  <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="Optional on first boot. Required if you want OpenAI as the default provider. If blank, the container still boots so you can configure Ollama or another provider from the UI." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="Optional hosted-provider quick start. Leave blank if you plan to use Ollama instead." Type="Variable" Display="always" Required="false" Mask="true"/>
   <Config Name="Default User ID" Target="USER" Default="default_user" Mode="" Description="Default user namespace used by the API and MCP server." Type="Variable" Display="always" Required="false" Mask="false">default_user</Config>
+  <Config Name="Ollama Base URL" Target="OLLAMA_BASE_URL" Default="" Mode="" Description="Native external Ollama root URL. Example: http://host.docker.internal:11434 or http://192.168.1.10:11434. When set, the wrapper auto-defaults to Ollama if no explicit provider override is supplied." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Ollama Chat Model" Target="LLM_MODEL" Default="" Mode="" Description="Optional Ollama chat model override. Set this to a model you already have pulled on your Ollama server. Example: llama3.1:latest or mistral:7b" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Ollama Embed Model" Target="EMBEDDER_MODEL" Default="" Mode="" Description="Optional Ollama embedding model override. Set this to a model you already have pulled on your Ollama server. Example: nomic-embed-text" Type="Variable" Display="always" Required="false" Mask="false"/>
 
   <Config Name="[UI] Browser API URL" Target="NEXT_PUBLIC_API_URL" Default="/openmemory-api" Mode="" Description="Default same-origin proxy path for the web UI. Leave this alone unless you intentionally want the browser to call a different API URL directly." Type="Variable" Display="advanced" Required="false" Mask="false">/openmemory-api</Config>
   <Config Name="[UI] Public User ID" Target="NEXT_PUBLIC_USER_ID" Default="default_user" Mode="" Description="Default user ID shown in the browser client. Usually keep this aligned with USER." Type="Variable" Display="advanced" Required="false" Mask="false">default_user</Config>
 
-  <Config Name="[LLM] Provider" Target="LLM_PROVIDER" Default="openai|anthropic|azure_openai|ollama|together|groq|litellm|mistralai|google_ai|aws_bedrock|gemini|deepseek|xai|lmstudio|langchain" Mode="" Description="LLM provider choice based on the current upstream OpenMemory UI provider list." Type="Variable" Display="advanced" Required="false" Mask="false">openai</Config>
-  <Config Name="[LLM] Model" Target="LLM_MODEL" Default="" Mode="" Description="Optional model name override. Leave blank to let OpenMemory use its provider default." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[LLM] Provider" Target="LLM_PROVIDER" Default="auto|openai|anthropic|azure_openai|ollama|together|groq|litellm|mistralai|google_ai|aws_bedrock|gemini|deepseek|xai|lmstudio|langchain" Mode="" Description="Advanced provider override. Leave this on auto for the normal wrapper behavior: OpenAI when no Ollama URL is set, or Ollama when OLLAMA_BASE_URL is set." Type="Variable" Display="advanced" Required="false" Mask="false">auto</Config>
   <Config Name="[LLM] API Key" Target="LLM_API_KEY" Default="" Mode="" Description="Optional provider-specific API key if you are not using OPENAI_API_KEY or if you want the LLM to use a different secret." Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="[LLM] Base URL" Target="LLM_BASE_URL" Default="" Mode="" Description="Optional custom API base URL for OpenAI-compatible or provider-specific endpoints." Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="[LLM] Ollama Base URL" Target="OLLAMA_BASE_URL" Default="" Mode="" Description="Optional Ollama URL. Example: http://host.docker.internal:11434" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[LLM] Base URL" Target="LLM_BASE_URL" Default="" Mode="" Description="Optional custom LLM API base URL for OpenAI-compatible or provider-specific endpoints. Use this for auth-protected OpenAI-style proxies, usually ending in /v1." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[LLM] Ollama Host Override" Target="OLLAMA_HOST" Default="" Mode="" Description="Optional host override used by upstream Docker Ollama auto-detection. Example: host.docker.internal" Type="Variable" Display="advanced" Required="false" Mask="false"/>
 
-  <Config Name="[Embedder] Provider" Target="EMBEDDER_PROVIDER" Default="openai|azure_openai|ollama|huggingface|vertexai|gemini|lmstudio|together|langchain|aws_bedrock" Mode="" Description="Embedder provider choice based on the current upstream OpenMemory UI provider list." Type="Variable" Display="advanced" Required="false" Mask="false">openai</Config>
-  <Config Name="[Embedder] Model" Target="EMBEDDER_MODEL" Default="" Mode="" Description="Optional embedder model override. Leave blank to let OpenMemory use its provider default." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[Embedder] Provider" Target="EMBEDDER_PROVIDER" Default="auto|openai|azure_openai|ollama|huggingface|vertexai|gemini|lmstudio|together|langchain|aws_bedrock" Mode="" Description="Advanced embedder provider override. Leave this on auto for the normal wrapper behavior so the embedder follows the matching OpenAI or Ollama path." Type="Variable" Display="advanced" Required="false" Mask="false">auto</Config>
   <Config Name="[Embedder] API Key" Target="EMBEDDER_API_KEY" Default="" Mode="" Description="Optional provider-specific embedder API key." Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="[Embedder] Base URL" Target="EMBEDDER_BASE_URL" Default="" Mode="" Description="Optional custom embedder API base URL." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[Embedder] Base URL" Target="EMBEDDER_BASE_URL" Default="" Mode="" Description="Optional custom embedder API base URL. Use this for OpenAI-compatible or separate embedding endpoints, including auth-protected proxies that expose /v1." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[Embedder] Dimensions Override" Target="EMBEDDER_DIMENSIONS" Default="" Mode="" Description="Optional explicit embedding dimension override for vector-store setup. Usually leave blank and let the wrapper auto-detect it, but set this if your embedder is custom or auto-detection cannot determine the correct size." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 
   <Config Name="[Storage] DATABASE_URL" Target="DATABASE_URL" Default="sqlite:////mem0/storage/openmemory.db" Mode="" Description="Advanced override for the API database connection. Leave the default SQLite path for normal AIO usage." Type="Variable" Display="advanced" Required="false" Mask="false">sqlite:////mem0/storage/openmemory.db</Config>
   <Config Name="[Legacy] API_KEY Alias" Target="API_KEY" Default="" Mode="" Description="Legacy upstream alias used by older OpenMemory examples that referenced env:API_KEY. Leave blank unless you intentionally depend on that older pattern." Type="Variable" Display="advanced" Required="false" Mask="true"/>
@@ -126,8 +129,14 @@ Full changelog and release notes: [url=https://github.com/JSONbored/mem0-aio/rel
   <Config Name="[Vector Store:Elasticsearch] Port" Target="ELASTICSEARCH_PORT" Default="" Mode="" Description="Optional external Elasticsearch port." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[Vector Store:Elasticsearch] User" Target="ELASTICSEARCH_USER" Default="" Mode="" Description="Optional Elasticsearch username." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[Vector Store:Elasticsearch] Password" Target="ELASTICSEARCH_PASSWORD" Default="" Mode="" Description="Optional Elasticsearch password." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="[Vector Store:Elasticsearch] Use SSL" Target="ELASTICSEARCH_USE_SSL" Default="true|false" Mode="" Description="Whether the Elasticsearch HTTP endpoint uses HTTPS. Default is true because modern Elasticsearch containers usually expose HTTPS." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="[Vector Store:Elasticsearch] Verify Certs" Target="ELASTICSEARCH_VERIFY_CERTS" Default="true|false" Mode="" Description="Whether to verify Elasticsearch TLS certificates. Default is false because many self-hosted homelab deployments use self-signed certs." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
   <Config Name="[Vector Store:OpenSearch] Host" Target="OPENSEARCH_HOST" Default="" Mode="" Description="Optional external OpenSearch host." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[Vector Store:OpenSearch] Port" Target="OPENSEARCH_PORT" Default="" Mode="" Description="Optional external OpenSearch port." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[Vector Store:OpenSearch] User" Target="OPENSEARCH_USER" Default="" Mode="" Description="Optional OpenSearch username." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="[Vector Store:OpenSearch] Password" Target="OPENSEARCH_PASSWORD" Default="" Mode="" Description="Optional OpenSearch password." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="[Vector Store:OpenSearch] Use SSL" Target="OPENSEARCH_USE_SSL" Default="true|false" Mode="" Description="Whether the OpenSearch HTTP endpoint uses HTTPS. Default is true because modern OpenSearch containers usually expose HTTPS." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="[Vector Store:OpenSearch] Verify Certs" Target="OPENSEARCH_VERIFY_CERTS" Default="true|false" Mode="" Description="Whether to verify OpenSearch TLS certificates. Leave false for self-signed homelab deployments." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
   <Config Name="[Vector Store:FAISS] Path" Target="FAISS_PATH" Default="" Mode="" Description="Optional FAISS storage path inside the container or a mounted host path." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 
   <Config Name="[Backup Export] User ID Filter" Target="EXPORT_USER_ID" Default="" Mode="" Description="Optional one-shot filter for the bundled upstream export helper script. Only set this if you intentionally run the export tooling inside the container." Type="Variable" Display="advanced" Required="false" Mask="false"/>
