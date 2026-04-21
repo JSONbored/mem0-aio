@@ -31,18 +31,12 @@
 - Actual memory generation still requires a valid LLM/embedder configuration. Leaving [code]OPENAI_API_KEY[/code] blank is fine if you are using Ollama, but you still need to provide a reachable Ollama endpoint and valid model names.&#xD;
 - Native Ollama uses the root API URL such as [code]http://host.docker.internal:11434[/code], not an OpenAI-compatible [code]/v1[/code] path. If your reverse proxy adds auth and only exposes an OpenAI-style [code]/v1[/code] endpoint, use the advanced OpenAI-compatible base URL fields instead of the native Ollama provider path.&#xD;
 - The embedded Qdrant service is intentionally bundled because that is the critical dependency for the beginner AIO path.</Overview>
-  <Changes>[b]Latest release[/b]&#xD;
-- v2.0.0-aio.2&#xD;
-[b]Fixes[/b]&#xD;
-- Align healthcheck and template auto defaults by @JSONbored&#xD;
-- Align provider auto mode and container healthcheck by @JSONbored&#xD;
-- Point openmemory submodule to maintained fork by @JSONbored&#xD;
-&#xD;
-&#xD;
-[b]Other Changes[/b]&#xD;
-- Document Ollama and external backend setup by @JSONbored&#xD;
-&#xD;
-Full changelog and release notes: [url=https://github.com/JSONbored/mem0-aio/releases]GitHub Releases[/url]</Changes>
+  <Changes>### 2026-04-18&#xD;
+- Release v2.0.0-aio.2.&#xD;
+- Align healthcheck and template auto defaults.&#xD;
+- Improve provider auto mode and container healthcheck behavior.&#xD;
+- Document Ollama and external backend setup more clearly.&#xD;
+</Changes>
   <Category>AI: Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>
