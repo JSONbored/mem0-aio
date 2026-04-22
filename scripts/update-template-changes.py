@@ -9,8 +9,21 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_CHANGELOG = ROOT / "CHANGELOG.md"
-DEFAULT_TEMPLATE = ROOT / "mem0-aio.xml"
-RELEASES_URL = "https://github.com/JSONbored/mem0-aio/releases"
+GENERATED_NOTE = (
+    "- Generated from CHANGELOG.md during release preparation. Do not edit manually."
+)
+
+
+def resolve_template_path() -> pathlib.Path:
+    repo_xml = ROOT / f"{ROOT.name}.xml"
+    if repo_xml.exists():
+        return repo_xml
+
+    xml_files = sorted(ROOT.glob("*.xml"))
+    if len(xml_files) == 1:
+        return xml_files[0]
+
+    return ROOT / "template-aio.xml"
 
 
 def extract_release_notes(version: str, changelog: pathlib.Path) -> str:
@@ -41,12 +54,29 @@ def extract_release_notes(version: str, changelog: pathlib.Path) -> str:
     return notes
 
 
-def build_changes_body(version: str, notes: str) -> str:
-    lines: list[str] = ["[b]Latest release[/b]", f"- {version}"]
+def release_heading(version: str, changelog: pathlib.Path) -> str:
+    heading = re.compile(
+        rf"^##\s+(?:\[{re.escape(version)}\]\([^)]+\)|{re.escape(version)})(?:\s+-\s+(.+))?$"
+    )
+    for line in changelog.read_text().splitlines():
+        match = heading.match(line.strip())
+        if match:
+            release_date = (match.group(1) or "").strip()
+            if release_date:
+                return f"### {release_date}"
+            break
+    return f"### {version}"
+
+
+def build_changes_body(
+    version: str,
+    notes: str,
+    changelog: pathlib.Path,
+) -> str:
+    lines: list[str] = [release_heading(version, changelog), GENERATED_NOTE]
     for line in notes.splitlines():
-        stripped = line.rstrip()
+        stripped = line.strip()
         if not stripped:
-            lines.append("")
             continue
         if stripped.startswith("<!--") and stripped.endswith("-->"):
             continue
@@ -54,15 +84,18 @@ def build_changes_body(version: str, notes: str) -> str:
             continue
         if stripped.startswith("Full Changelog:"):
             continue
-        if stripped.startswith("### "):
-            lines.append(f"[b]{stripped[4:]}[/b]")
+        if stripped.startswith("## "):
             continue
-        lines.append(stripped)
+        if stripped.startswith("### "):
+            continue
+        if stripped.startswith(("- ", "* ")):
+            lines.append(f"- {stripped[2:].strip()}")
+            continue
+        lines.append(f"- {stripped}")
 
-    lines.append("")
-    lines.append(
-        f"Full changelog and release notes: [url={RELEASES_URL}]GitHub Releases[/url]"
-    )
+    if len(lines) == 2:
+        raise SystemExit("Release notes did not produce any bullet lines for <Changes>")
+
     return "\n".join(lines).strip()
 
 
@@ -83,18 +116,19 @@ def update_template(template_path: pathlib.Path, encoded_changes: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Update mem0-aio.xml <Changes> from CHANGELOG release notes."
+        description="Update the template XML <Changes> block from CHANGELOG release notes."
     )
-    parser.add_argument("version", help="Release version (example: v2.0.0-aio.1)")
+    parser.add_argument("version", help="Release version (example: v0.2.0)")
     parser.add_argument("--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG)
-    parser.add_argument("--template", type=pathlib.Path, default=DEFAULT_TEMPLATE)
+    parser.add_argument("--template", type=pathlib.Path, default=None)
     args = parser.parse_args()
 
+    template_path = args.template or resolve_template_path()
     notes = extract_release_notes(args.version, args.changelog)
-    body = build_changes_body(args.version, notes)
-    update_template(args.template, encode_for_template(body))
+    body = build_changes_body(args.version, notes, args.changelog)
+    update_template(template_path, encode_for_template(body))
     print(
-        f"Updated <Changes> in {args.template} from {args.changelog} for {args.version}"
+        f"Updated <Changes> in {template_path} from {args.changelog} for {args.version}"
     )
     return 0
 

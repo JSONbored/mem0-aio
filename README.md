@@ -1,12 +1,6 @@
 # mem0-aio
 
-<div align="center">
-
 ![mem0-aio](https://socialify.git.ci/JSONbored/mem0-aio/image?custom_description=Unraid+CA+AIO+template+and+Docker+image+for+Mem0+%28OpenMemory%29%2C+an+AI+memory+retention+layer.&custom_language=Dockerfile&description=1&font=Raleway&forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F137054526%3Fs%3D200%26v%3D4&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Light)
-
-</div>
-
----
 
 An Unraid-first, single-container deployment of [Mem0 OpenMemory](https://github.com/mem0ai/mem0/tree/main/openmemory) for people who want the easiest reliable self-hosted install without manually wiring a separate vector database on day one.
 
@@ -76,12 +70,27 @@ See [docs/releases.md](docs/releases.md) for the release workflow details.
 
 ## Validation
 
-Local validation in this repo is built around:
+Required local validation is pytest-first:
 
-- XML validation for the audited template surface
-- shell and Python syntax checks
-- local Docker build and smoke coverage
-- restart and persistence checks for the embedded OpenMemory stack
+```bash
+STRICT_PLACEHOLDERS=true bash scripts/validate-derived-repo.sh .
+python3 scripts/validate-template.py
+git submodule update --init --recursive
+python3 -m venv .venv-local
+.venv-local/bin/pip install -r requirements-dev.txt
+.venv-local/bin/pytest tests/unit tests/template --junit-xml=reports/pytest-unit.xml -o junit_family=xunit1
+.venv-local/bin/pytest tests/integration -m integration --junit-xml=reports/pytest-integration.xml -o junit_family=xunit1
+trunk flakytests validate --junit-paths "reports/pytest-unit.xml,reports/pytest-integration.xml"
+trunk check --show-existing --all
+```
+
+The optional external-backend matrix is pytest-based too. It is intentionally opt-in because it requires a prepared Ollama container plus extra sidecar services:
+
+```bash
+MEM0_ENABLE_BACKEND_MATRIX=1 \
+OLLAMA_CONTAINER=ollama-temp \
+.venv-local/bin/pytest tests/integration/test_backend_matrix.py -m integration
+```
 
 ## Support
 

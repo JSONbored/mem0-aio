@@ -6,22 +6,23 @@ import json
 import os
 import pathlib
 import re
-import subprocess
+import subprocess  # nosec B404 - automation shells out only to trusted local git
 import sys
 import urllib.error
 import urllib.request
-
+from typing import NoReturn
 
 ROOT = pathlib.Path(".")
 UPSTREAM_FILE = ROOT / "upstream.toml"
 DOCKERFILE = ROOT / "Dockerfile"
+GIT_BIN = "/usr/bin/git"
 SEMVER_RE = re.compile(
     r"^v?(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
     r"(?:-(?P<prerelease>[0-9A-Za-z.-]+))?$"
 )
 
 
-def fail(message: str) -> "NoReturn":
+def fail(message: str) -> NoReturn:
     print(message, file=sys.stderr)
     raise SystemExit(1)
 
@@ -36,7 +37,7 @@ def http_json(url: str, headers: dict[str, str] | None = None) -> object:
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310
             return json.load(response)
     except urllib.error.HTTPError as exc:
         fail(f"HTTP error while requesting {url}: {exc.code} {exc.reason}")
@@ -83,7 +84,9 @@ def github_headers() -> dict[str, str]:
 
 
 def latest_github_release(repo: str, stable_only: bool) -> str:
-    data = http_json(f"https://api.github.com/repos/{repo}/releases?per_page=100", github_headers())
+    data = http_json(
+        f"https://api.github.com/repos/{repo}/releases?per_page=100", github_headers()
+    )
     if not isinstance(data, list):
         fail(f"Unexpected GitHub releases response for {repo}")
     releases: list[str] = []
@@ -137,8 +140,12 @@ def write_local_version(config: dict[str, object], new_version: str) -> None:
 
     submodule_path = str(config.get("submodule_path", "")).strip()
     if submodule_path:
-        subprocess.run(["git", "-C", submodule_path, "fetch", "--tags", "origin"], check=True)
-        subprocess.run(["git", "-C", submodule_path, "checkout", new_version], check=True)
+        subprocess.run(
+            [GIT_BIN, "-C", submodule_path, "fetch", "--tags", "origin"], check=True
+        )  # nosec
+        subprocess.run(
+            [GIT_BIN, "-C", submodule_path, "checkout", new_version], check=True
+        )  # nosec
 
 
 def write_outputs(outputs: dict[str, str]) -> None:
@@ -188,7 +195,9 @@ def main() -> None:
     current_version = read_local_version(upstream)
 
     if upstream_type == "github-release":
-        latest_version = latest_github_release(str(upstream.get("repo", "")).strip(), stable_only)
+        latest_version = latest_github_release(
+            str(upstream.get("repo", "")).strip(), stable_only
+        )
     else:
         fail(f"Unsupported upstream type: {upstream_type}")
 
