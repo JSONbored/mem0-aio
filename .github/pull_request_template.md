@@ -1,3 +1,5 @@
+# Pull Request
+
 ## Summary
 
 - what changed
@@ -5,7 +7,9 @@
 
 ## Validation
 
-- [ ] local smoke test passed
+- [ ] `trunk check --show-existing --all` passed locally
+- [ ] `pytest tests/unit tests/template` passed locally
+- [ ] `pytest tests/integration -m integration` passed locally when runtime or CI behavior changed
 - [ ] docs updated if behavior changed
 - [ ] XML updated if config surface changed
 

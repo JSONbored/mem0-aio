@@ -2,7 +2,7 @@ name: Check Upstream Version
 
 on:
   schedule:
-    - cron: '17 7 * * 1'
+    - cron: 17 7 * * 1
   workflow_dispatch:
 
 env:
