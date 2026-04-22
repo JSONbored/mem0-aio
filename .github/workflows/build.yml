@@ -187,22 +187,15 @@ jobs:
           find rootfs -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
           find rootfs -type f -path '*/run' -print0 | xargs -0 -n1 bash -n
 
-      - name: Validate CI flag resolver behavior
-        if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
+      - name: Run targeted pytest validation suite
+        if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
         run: |
           python3 -m venv .venv-ci
           .venv-ci/bin/pip install -r requirements-dev.txt
-          .venv-ci/bin/pytest tests/unit/test_ci_flags.py
-
-      - name: Validate XML
-        if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true' }}
-        run: |
-          python3 scripts/validate-template.py
-
-      - name: Validate derived repo placeholders
-        run: |
-          chmod +x scripts/validate-derived-repo.sh
-          ./scripts/validate-derived-repo.sh .
+          .venv-ci/bin/pytest \
+            tests/unit/test_ci_flags.py \
+            tests/template/test_validate_template.py \
+            tests/template/test_validate_derived_repo.py
 
       - name: Validate Renovate config
         if: ${{ needs.detect-changes.outputs.renovate_related == 'true' }}

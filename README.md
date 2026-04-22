@@ -73,8 +73,6 @@ See [docs/releases.md](docs/releases.md) for the release workflow details.
 Required local validation is pytest-first:
 
 ```bash
-STRICT_PLACEHOLDERS=true bash scripts/validate-derived-repo.sh .
-python3 scripts/validate-template.py
 git submodule update --init --recursive
 python3 -m venv .venv-local
 .venv-local/bin/pip install -r requirements-dev.txt
@@ -89,7 +87,7 @@ The optional external-backend matrix is pytest-based too. It is intentionally op
 ```bash
 MEM0_ENABLE_BACKEND_MATRIX=1 \
 OLLAMA_CONTAINER=ollama-temp \
-.venv-local/bin/pytest tests/integration/test_backend_matrix.py -m integration
+.venv-local/bin/pytest tests/integration/test_backend_matrix.py -m extended_integration
 ```
 
 ## Support
