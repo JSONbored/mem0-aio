@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers import docker_available, run_command
+from tests.helpers import docker_available, ensure_pytest_image
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 IMAGE_TAG = "mem0-aio:pytest"
@@ -19,5 +19,5 @@ def built_image() -> str:
         pytest.fail(
             "Mem0 source submodule is missing. Run 'git submodule update --init --recursive'."
         )
-    run_command(["docker", "build", "--platform", "linux/amd64", "-t", IMAGE_TAG, "."])
+    ensure_pytest_image(IMAGE_TAG)
     return IMAGE_TAG

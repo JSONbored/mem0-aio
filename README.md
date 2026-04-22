@@ -78,9 +78,16 @@ python3 -m venv .venv-local
 .venv-local/bin/pip install -r requirements-dev.txt
 .venv-local/bin/pytest tests/unit tests/template --junit-xml=reports/pytest-unit.xml -o junit_family=xunit1
 .venv-local/bin/pytest tests/integration -m integration --junit-xml=reports/pytest-integration.xml -o junit_family=xunit1
-trunk flakytests validate --junit-paths "reports/pytest-unit.xml,reports/pytest-integration.xml"
+./trunk-analytics-cli validate --junit-paths "reports/pytest-unit.xml,reports/pytest-integration.xml"
 trunk check --show-existing --all
 ```
+
+CI cost model:
+
+- relevant PRs and `main` pushes run the fast validation layers first
+- Docker-backed integration tests run for build-relevant changes, for `main` release-metadata commits when publish is still in play, and for manual dispatches
+- image publish stays gated behind the integration suite instead of treating skipped integration as acceptable
+- the extended backend matrix remains opt-in because it is materially more expensive than the required gate
 
 The optional external-backend matrix is pytest-based too. It is intentionally opt-in because it requires a prepared Ollama container plus extra sidecar services:
 

@@ -14,7 +14,6 @@ on:
       - .trunk/**
       - upstream.toml
       - mem0-aio.xml
-      - README.md
       - CHANGELOG.md
       - cliff.toml
       - assets/**
@@ -33,7 +32,6 @@ on:
       - .trunk/**
       - upstream.toml
       - mem0-aio.xml
-      - README.md
       - CHANGELOG.md
       - cliff.toml
       - assets/**
@@ -46,6 +44,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: jsonbored/mem0-aio
   PUBLISH_PLATFORMS: linux/amd64,linux/arm64
+  PYTHON_VERSION: "3.13"
   TRUNK_ORG_URL_SLUG: aethereal
 
 permissions:
@@ -65,6 +64,7 @@ jobs:
       xml_related: ${{ steps.filter.outputs.xml_related }}
       renovate_related: ${{ steps.filter.outputs.renovate_related }}
       tooling_related: ${{ steps.filter.outputs.tooling_related }}
+      workflow_related: ${{ steps.filter.outputs.workflow_related }}
       run_tests_requested: ${{ steps.filter.outputs.run_tests_requested }}
       publish_requested: ${{ steps.filter.outputs.publish_requested }}
     steps:
@@ -93,6 +93,7 @@ jobs:
             echo "xml_related=true" >> "${GITHUB_OUTPUT}"
             echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
             echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
+            echo "workflow_related=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
@@ -110,6 +111,7 @@ jobs:
             echo "xml_related=true" >> "${GITHUB_OUTPUT}"
             echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
             echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
+            echo "workflow_related=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
@@ -120,6 +122,7 @@ jobs:
               echo "xml_related=true" >> "${GITHUB_OUTPUT}"
               echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
               echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
+              echo "workflow_related=true" >> "${GITHUB_OUTPUT}"
               exit 0
             fi
           else
@@ -139,6 +142,7 @@ jobs:
           xml_related=false
           renovate_related=false
           tooling_related=false
+          workflow_related=false
 
           while IFS= read -r path; do
             [[ -z "${path}" ]] && continue
@@ -146,11 +150,15 @@ jobs:
               Dockerfile|pyproject.toml|requirements-dev.txt|upstream.toml|openmemory|rootfs/*|openmemory/*|tests/*)
                 build_related=true
                 ;;
-              mem0-aio.xml|assets/*|README.md|CHANGELOG.md|cliff.toml)
+              mem0-aio.xml|assets/*|CHANGELOG.md|cliff.toml)
                 xml_related=true
                 ;;
-              scripts/*|.github/workflows/*|.trunk/*)
+              scripts/*|.trunk/*)
                 tooling_related=true
+                ;;
+              .github/workflows/*)
+                tooling_related=true
+                workflow_related=true
                 ;;
               renovate.json)
                 renovate_related=true
@@ -162,6 +170,7 @@ jobs:
           echo "xml_related=${xml_related}" >> "${GITHUB_OUTPUT}"
           echo "renovate_related=${renovate_related}" >> "${GITHUB_OUTPUT}"
           echo "tooling_related=${tooling_related}" >> "${GITHUB_OUTPUT}"
+          echo "workflow_related=${workflow_related}" >> "${GITHUB_OUTPUT}"
 
   validate-template:
     needs: detect-changes
@@ -187,29 +196,26 @@ jobs:
           find rootfs -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
           find rootfs -type f -path '*/run' -print0 | xargs -0 -n1 bash -n
 
-      - name: Run targeted pytest validation suite
-        if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
-        run: |
-          python3 -m venv .venv-ci
-          .venv-ci/bin/pip install -r requirements-dev.txt
-          .venv-ci/bin/pytest \
-            tests/unit/test_ci_flags.py \
-            tests/template/test_validate_template.py \
-            tests/template/test_validate_derived_repo.py
-
       - name: Validate Renovate config
         if: ${{ needs.detect-changes.outputs.renovate_related == 'true' }}
         run: npx --yes --package renovate renovate-config-validator renovate.json
 
   pinned-actions:
+    needs: detect-changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
+      - name: Skip when workflow files are unchanged
+        if: ${{ needs.detect-changes.outputs.workflow_related != 'true' }}
+        run: echo "Workflow files unchanged; skipping pinned action scan."
+
       - name: Checkout
+        if: ${{ needs.detect-changes.outputs.workflow_related == 'true' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Enforce pinned action SHAs
+        if: ${{ needs.detect-changes.outputs.workflow_related == 'true' }}
         run: |
           python3 - <<'PY'
           import pathlib
@@ -263,11 +269,15 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install pytest
-        run: |
-          python3 -m venv .venv-ci
-          .venv-ci/bin/pip install -r requirements-dev.txt
+        run: python -m pip install -r requirements-dev.txt
 
       - name: Run pytest unit tests
         id: unit_pytest
@@ -275,7 +285,7 @@ jobs:
           mkdir -p reports
           rm -f reports/pytest-unit.xml
           set +e
-          .venv-ci/bin/pytest \
+          python -m pytest \
             tests/unit \
             tests/template \
             --junit-xml=reports/pytest-unit.xml \
@@ -300,7 +310,7 @@ jobs:
         run: exit 1
 
   integration-tests:
-    if: ${{ needs.detect-changes.outputs.build_related == 'true' && needs.detect-changes.outputs.run_tests_requested == 'true' }}
+    if: ${{ needs.detect-changes.outputs.run_tests_requested == 'true' && (needs.detect-changes.outputs.build_related == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.publish_requested == 'true')) }}
     needs:
       - detect-changes
       - validate-template
@@ -315,19 +325,36 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Prebuild pytest image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: mem0-aio:pytest
+          cache-from: type=gha,scope=mem0-aio-pytest
+          cache-to: type=gha,mode=max,scope=mem0-aio-pytest
 
       - name: Install pytest
-        run: |
-          python3 -m venv .venv-ci
-          .venv-ci/bin/pip install -r requirements-dev.txt
+        run: python -m pip install -r requirements-dev.txt
 
       - name: Run pytest integration tests
         id: integration_pytest
+        env:
+          AIO_PYTEST_USE_PREBUILT_IMAGE: "true"
         run: |
           mkdir -p reports
           rm -f reports/pytest-integration.xml
           set +e
-          .venv-ci/bin/pytest \
+          python -m pytest \
             tests/integration \
             -m integration \
             --junit-xml=reports/pytest-integration.xml \
@@ -359,7 +386,7 @@ jobs:
         run: exit 1
 
   publish:
-    if: ${{ needs.detect-changes.outputs.build_related == 'true' && vars.ENABLE_AIO_AUTOMATION == 'true' && github.event_name == 'push' && needs.detect-changes.outputs.publish_requested == 'true' && (needs.integration-tests.result == 'success' || needs.integration-tests.result == 'skipped') }}
+    if: ${{ needs.detect-changes.outputs.build_related == 'true' && vars.ENABLE_AIO_AUTOMATION == 'true' && github.event_name == 'push' && needs.detect-changes.outputs.publish_requested == 'true' && needs.integration-tests.result == 'success' }}
     needs:
       - detect-changes
       - validate-template
@@ -472,8 +499,8 @@ jobs:
           context: .
           platforms: ${{ env.PUBLISH_PLATFORMS }}
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=mem0-aio-publish
+          cache-to: type=gha,mode=max,scope=mem0-aio-publish
           tags: ${{ steps.prep.outputs.tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/JSONbored/mem0-aio

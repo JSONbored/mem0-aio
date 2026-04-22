@@ -40,6 +40,22 @@ def docker_available() -> bool:
     return result.returncode == 0
 
 
+def docker_image_exists(image_tag: str) -> bool:
+    result = run_command(["docker", "image", "inspect", image_tag], check=False)
+    return result.returncode == 0
+
+
+def ensure_pytest_image(image_tag: str) -> None:
+    if os.environ.get("AIO_PYTEST_USE_PREBUILT_IMAGE") == "true":
+        if not docker_image_exists(image_tag):
+            raise AssertionError(
+                f"Expected prebuilt pytest image {image_tag} to be loaded before the test run."
+            )
+        return
+
+    run_command(["docker", "build", "--platform", "linux/amd64", "-t", image_tag, "."])
+
+
 def reserve_host_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -52,9 +68,7 @@ class DockerRuntime:
         self.image_tag = image_tag
 
     def build(self) -> None:
-        run_command(
-            ["docker", "build", "--platform", "linux/amd64", "-t", self.image_tag, "."]
-        )
+        ensure_pytest_image(self.image_tag)
 
     def inspect_state(self, name: str, field: str) -> str:
         result = run_command(
