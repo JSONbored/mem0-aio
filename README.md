@@ -82,6 +82,13 @@ trunk flakytests validate --junit-paths "reports/pytest-unit.xml,reports/pytest-
 trunk check --show-existing --all
 ```
 
+CI cost model:
+
+- pull requests and pushes only run the Docker-backed integration suite when build-relevant files change
+- fast checks reuse `actions/setup-python` pip caching, and CI preloads a cached `mem0-aio:pytest` image before the integration suite instead of rebuilding it inside every pytest run
+- image publish remains gated behind the integration suite, so release and publish paths cannot skip it
+- release metadata commits on `main` still trigger the integration suite before publish, even if they only touch changelog or release files
+
 The optional external-backend matrix is pytest-based too. It is intentionally opt-in because it requires a prepared Ollama container plus extra sidecar services:
 
 ```bash

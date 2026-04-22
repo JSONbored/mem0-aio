@@ -11,7 +11,7 @@ from urllib import error, request
 
 import pytest
 
-from tests.helpers import reserve_host_port, run_command
+from tests.helpers import reserve_host_port, restore_bind_mount_permissions, run_command
 
 pytestmark = pytest.mark.extended_integration
 
@@ -408,6 +408,7 @@ def backend_runtime(backend: str, image_tag: str):
             check=False,
         )
         run_command(["docker", "network", "rm", network_name], check=False)
+        restore_bind_mount_permissions(image_tag, storage_path)
         storage_dir.cleanup()
 
 

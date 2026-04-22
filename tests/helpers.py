@@ -40,6 +40,53 @@ def docker_available() -> bool:
     return result.returncode == 0
 
 
+def docker_image_exists(image_tag: str) -> bool:
+    result = run_command(["docker", "image", "inspect", image_tag], check=False)
+    return result.returncode == 0
+
+
+def build_test_image(image_tag: str) -> None:
+    if os.environ.get("AIO_TEST_IMAGE_REUSE") == "1":
+        if not docker_image_exists(image_tag):
+            raise AssertionError(
+                f"Expected prebuilt test image {image_tag!r}, but it is not available."
+            )
+        return
+
+    run_command(["docker", "build", "--platform", "linux/amd64", "-t", image_tag, "."])
+
+
+def restore_bind_mount_permissions(image_tag: str, path: Path) -> None:
+    if not path.exists():
+        return
+
+    uid = getattr(os, "getuid", lambda: 0)()
+    gid = getattr(os, "getgid", lambda: 0)()
+    result = run_command(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "--platform",
+            "linux/amd64",
+            "-v",
+            f"{path}:/target",
+            "--entrypoint",
+            "sh",
+            image_tag,
+            "-c",
+            f"chown -R {uid}:{gid} /target && chmod -R u+rwX /target",
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"Failed to restore bind-mount permissions for {path}.\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+
+
 def reserve_host_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -52,9 +99,7 @@ class DockerRuntime:
         self.image_tag = image_tag
 
     def build(self) -> None:
-        run_command(
-            ["docker", "build", "--platform", "linux/amd64", "-t", self.image_tag, "."]
-        )
+        build_test_image(self.image_tag)
 
     def inspect_state(self, name: str, field: str) -> str:
         result = run_command(
@@ -116,6 +161,8 @@ class DockerRuntime:
                 yield handle
             finally:
                 self.remove(name)
+                restore_bind_mount_permissions(self.image_tag, Path(config_dir))
+                restore_bind_mount_permissions(self.image_tag, Path(data_dir))
 
 
 class ContainerHandle:

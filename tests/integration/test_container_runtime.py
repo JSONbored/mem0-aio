@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from tests.conftest import IMAGE_TAG
-from tests.helpers import reserve_host_port, run_command
+from tests.helpers import reserve_host_port, restore_bind_mount_permissions, run_command
 
 pytestmark = pytest.mark.integration
 
@@ -80,6 +80,7 @@ def container(storage_dir: Path):
         yield name, ui_port, api_port, qdrant_port
     finally:
         run_command(["docker", "rm", "-f", name], check=False)
+        restore_bind_mount_permissions(IMAGE_TAG, storage_dir)
 
 
 def test_happy_path_boot_and_restart(built_image: str) -> None:

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
-from tests.helpers import docker_available, run_command
+from tests.helpers import build_test_image, docker_available
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-IMAGE_TAG = "mem0-aio:pytest"
+IMAGE_TAG = os.environ.get("AIO_TEST_IMAGE", "mem0-aio:pytest")
 API_SOURCE = REPO_ROOT / "openmemory/openmemory/api"
 
 
@@ -19,5 +20,5 @@ def built_image() -> str:
         pytest.fail(
             "Mem0 source submodule is missing. Run 'git submodule update --init --recursive'."
         )
-    run_command(["docker", "build", "--platform", "linux/amd64", "-t", IMAGE_TAG, "."])
+    build_test_image(IMAGE_TAG)
     return IMAGE_TAG
