@@ -3,13 +3,16 @@ from __future__ import annotations
 import time
 import uuid
 from contextlib import contextmanager
-from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import pytest
 
 from tests.conftest import IMAGE_TAG
-from tests.helpers import reserve_host_port, run_command
+from tests.helpers import (
+    container_path_exists,
+    docker_volume,
+    reserve_host_port,
+    run_command,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -52,7 +55,7 @@ def wait_for_ready(name: str, ui_port: int, api_port: int, qdrant_port: int) -> 
 
 
 @contextmanager
-def container(storage_dir: Path):
+def container(storage_volume: str):
     name = f"mem0-aio-pytest-{uuid.uuid4().hex[:10]}"
     ui_port = reserve_host_port()
     api_port = reserve_host_port()
@@ -72,7 +75,7 @@ def container(storage_dir: Path):
         "-p",
         f"{qdrant_port}:6333",
         "-v",
-        f"{storage_dir}:/mem0/storage",
+        f"{storage_volume}:/mem0/storage",
         IMAGE_TAG,
     ]
     run_command(command)
@@ -83,8 +86,8 @@ def container(storage_dir: Path):
 
 
 def test_happy_path_boot_and_restart(built_image: str) -> None:
-    with TemporaryDirectory(prefix="mem0-aio-storage-") as storage_dir:
-        with container(Path(storage_dir)) as (name, ui_port, api_port, qdrant_port):
+    with docker_volume("mem0-aio-storage") as storage_volume:
+        with container(storage_volume) as (name, ui_port, api_port, qdrant_port):
             wait_for_ready(name, ui_port, api_port, qdrant_port)
             run_command(
                 [
@@ -93,8 +96,12 @@ def test_happy_path_boot_and_restart(built_image: str) -> None:
                     f"http://127.0.0.1:{ui_port}/openmemory-api/api/v1/config",
                 ]
             )
-            assert Path(storage_dir, "openmemory.db").is_file()  # nosec B101
+            assert container_path_exists(
+                name, "/mem0/storage/openmemory.db"
+            )  # nosec B101
 
             run_command(["docker", "restart", name])
             wait_for_ready(name, ui_port, api_port, qdrant_port)
-            assert Path(storage_dir, "openmemory.db").is_file()  # nosec B101
+            assert container_path_exists(
+                name, "/mem0/storage/openmemory.db"
+            )  # nosec B101
