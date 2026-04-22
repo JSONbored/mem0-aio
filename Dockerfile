@@ -126,6 +126,8 @@ VOLUME ["/mem0/storage"]
 # Expose ports: UI (3000), MCP API (8765), Qdrant (6333)
 EXPOSE 3000 8765 6333
 
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=300000
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
   CMD sh -lc 'IP=$(hostname -i | awk "{print \$1}"); curl -fsS "http://${IP}:3000/" >/dev/null || exit 1'
 

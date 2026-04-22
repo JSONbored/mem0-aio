@@ -13,7 +13,7 @@ import pytest
 
 from tests.helpers import reserve_host_port, run_command
 
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.extended_integration
 
 OLLAMA_CONTAINER = os.environ.get("OLLAMA_CONTAINER", "ollama-temp")
 MCP_PATH = "/mcp/openmemory/http/default_user"
