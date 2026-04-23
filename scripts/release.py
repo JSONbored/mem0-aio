@@ -4,14 +4,24 @@ from __future__ import annotations
 import argparse
 import pathlib
 import re
-import subprocess
-
+import subprocess  # nosec - release helpers shell out only to trusted local git
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_CHANGELOG = ROOT / "CHANGELOG.md"
 DEFAULT_DOCKERFILE = ROOT / "Dockerfile"
 DEFAULT_UPSTREAM = ROOT / "upstream.toml"
 AIO_TAG_PATTERN = "*-aio.*"
+GIT_BIN = "/usr/bin/git"
+
+
+def git_output(*args: str) -> str:
+    return subprocess.check_output([GIT_BIN, *args], cwd=ROOT, text=True)  # nosec
+
+
+def git_completed(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [GIT_BIN, *args], cwd=ROOT, text=True, capture_output=True, check=False
+    )  # nosec
 
 
 def load_upstream_version_key(path: pathlib.Path) -> str:
@@ -43,16 +53,13 @@ def read_upstream_version(dockerfile: pathlib.Path, upstream: pathlib.Path) -> s
 
 
 def git_tags() -> list[str]:
-    output = subprocess.check_output(["git", "tag", "--list"], cwd=ROOT, text=True)
+    output = git_output("tag", "--list")
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 
 def latest_aio_release_tag() -> str | None:
-    completed = subprocess.run(
-        ["git", "describe", "--tags", "--abbrev=0", "--match", AIO_TAG_PATTERN, "HEAD"],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
+    completed = git_completed(
+        "describe", "--tags", "--abbrev=0", "--match", AIO_TAG_PATTERN, "HEAD"
     )
     if completed.returncode != 0:
         return None
@@ -78,7 +85,7 @@ def has_unreleased_changes(dockerfile: pathlib.Path, upstream: pathlib.Path) -> 
     latest_tag = latest_aio_release_tag()
     if latest_tag is None:
         return True
-    output = subprocess.check_output(["git", "log", "--format=%s", f"{latest_tag}..HEAD"], cwd=ROOT, text=True)
+    output = git_output("log", "--format=%s", f"{latest_tag}..HEAD")
     return any(line.strip() for line in output.splitlines())
 
 
@@ -134,7 +141,7 @@ def find_release_commit(version: str) -> str:
     exact = f"chore(release): {version}"
     with_suffix = re.compile(rf"^{re.escape(exact)} \(#\d+\)$")
 
-    output = subprocess.check_output(["git", "log", "--format=%H\t%s", "HEAD"], cwd=ROOT, text=True)
+    output = git_output("log", "--format=%H\t%s", "HEAD")
     for line in output.splitlines():
         if not line.strip():
             continue
@@ -152,20 +159,36 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Release helpers for AIO repos.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     upstream_parser = subparsers.add_parser("upstream-version")
-    upstream_parser.add_argument("--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE)
-    upstream_parser.add_argument("--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM)
+    upstream_parser.add_argument(
+        "--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE
+    )
+    upstream_parser.add_argument(
+        "--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM
+    )
     next_parser = subparsers.add_parser("next-version")
-    next_parser.add_argument("--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE)
-    next_parser.add_argument("--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM)
+    next_parser.add_argument(
+        "--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE
+    )
+    next_parser.add_argument(
+        "--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM
+    )
     changes_parser = subparsers.add_parser("has-unreleased-changes")
-    changes_parser.add_argument("--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE)
-    changes_parser.add_argument("--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM)
+    changes_parser.add_argument(
+        "--dockerfile", type=pathlib.Path, default=DEFAULT_DOCKERFILE
+    )
+    changes_parser.add_argument(
+        "--upstream-config", type=pathlib.Path, default=DEFAULT_UPSTREAM
+    )
     subparsers.add_parser("latest-aio-tag")
     latest_parser = subparsers.add_parser("latest-changelog-version")
-    latest_parser.add_argument("--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG)
+    latest_parser.add_argument(
+        "--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG
+    )
     notes_parser = subparsers.add_parser("extract-release-notes")
     notes_parser.add_argument("version")
-    notes_parser.add_argument("--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG)
+    notes_parser.add_argument(
+        "--changelog", type=pathlib.Path, default=DEFAULT_CHANGELOG
+    )
     commit_parser = subparsers.add_parser("find-release-commit")
     commit_parser.add_argument("version")
     args = parser.parse_args()
@@ -174,7 +197,11 @@ def main() -> None:
     elif args.command == "next-version":
         print(next_release_version(args.dockerfile, args.upstream_config))
     elif args.command == "has-unreleased-changes":
-        print("true" if has_unreleased_changes(args.dockerfile, args.upstream_config) else "false")
+        print(
+            "true"
+            if has_unreleased_changes(args.dockerfile, args.upstream_config)
+            else "false"
+        )
     elif args.command == "latest-aio-tag":
         latest_tag = latest_aio_release_tag()
         if latest_tag:

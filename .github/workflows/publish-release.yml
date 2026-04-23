@@ -1,0 +1,132 @@
+name: Publish Release / Mem0-AIO
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-release:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Determine release version
+        id: version
+        run: |
+          release_version="$(python3 scripts/release.py latest-changelog-version)"
+          echo "release_version=${release_version}" >> "${GITHUB_OUTPUT}"
+          release_commit="$(python3 scripts/release.py find-release-commit "${release_version}")"
+          echo "release_commit=${release_commit}" >> "${GITHUB_OUTPUT}"
+          echo "Matched release commit ${release_commit} for ${release_version}"
+          changelog_version="$(python3 scripts/release.py latest-changelog-version)"
+          if [[ "${changelog_version}" != "${release_version}" ]]; then
+            echo "CHANGELOG top entry ${changelog_version} does not match ${release_version}" >&2
+            exit 1
+          fi
+
+      - name: Require successful CI for release commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.release_commit }}
+          WORKFLOW_NAME: CI / Mem0-AIO
+        run: |
+          runs_json="$(gh run list \
+            --workflow "${WORKFLOW_NAME}" \
+            --commit "${RELEASE_COMMIT}" \
+            --limit 20 \
+            --json databaseId,headSha,status,conclusion)"
+
+          RUNS_JSON="${runs_json}" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          release_commit = os.environ["RELEASE_COMMIT"]
+          runs = json.loads(os.environ["RUNS_JSON"])
+          successful = [
+              run
+              for run in runs
+              if run["headSha"] == release_commit
+              and run["status"] == "completed"
+              and run["conclusion"] == "success"
+          ]
+          if successful:
+              print(
+                  f"Found {len(successful)} successful CI run(s) for release commit {release_commit}."
+              )
+              sys.exit(0)
+
+          print(
+              f"No successful '{os.environ['WORKFLOW_NAME']}' run was found for release commit {release_commit}.",
+              file=sys.stderr,
+          )
+          sys.exit(1)
+          PY
+
+      - name: Extract release notes
+        id: notes
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+        run: |
+          {
+            echo "release_notes<<RELEASE_NOTES_EOF"
+            python3 scripts/release.py extract-release-notes "${RELEASE_VERSION}"
+            echo "RELEASE_NOTES_EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Create Git tag if missing
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.release_commit }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if git rev-parse "${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "Tag ${RELEASE_VERSION} already exists; skipping."
+            exit 0
+          fi
+
+          auth_token="${RELEASE_TOKEN:-${GITHUB_TOKEN}}"
+          if [[ -z "${auth_token}" ]]; then
+            echo "No token available for tag creation." >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git tag "${RELEASE_VERSION}" "${RELEASE_COMMIT}"
+          git push "https://x-access-token:${auth_token}@github.com/${GITHUB_REPOSITORY}.git" "${RELEASE_VERSION}"
+
+      - name: Publish GitHub release
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.release_notes }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.release_commit }}
+        run: |
+          export GITHUB_TOKEN="${RELEASE_TOKEN:-${GITHUB_TOKEN}}"
+
+          if gh release view "${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "GitHub release ${RELEASE_VERSION} already exists; skipping."
+            exit 0
+          fi
+
+          notes_file="$(mktemp)"
+          printf '%s\n' "${RELEASE_NOTES}" > "${notes_file}"
+          gh release create "${RELEASE_VERSION}" \
+            --title "${RELEASE_VERSION}" \
+            --notes-file "${notes_file}" \
+            --target "${RELEASE_COMMIT}"

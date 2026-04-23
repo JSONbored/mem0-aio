@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+junit_family = "xunit1"
+markers = [
+  "integration: Docker-backed container and image tests",
+  "extended_integration: opt-in extended runtime and configuration matrix tests",
+]
+addopts = ["-ra", "--strict-markers"]
