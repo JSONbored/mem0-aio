@@ -467,9 +467,10 @@ jobs:
             release_package_tag="${RELEASE_TAG_OVERRIDE}"
           else
             changelog_version="$(python3 scripts/release.py latest-changelog-version 2>/dev/null || true)"
+            release_commit_pattern="^chore\\(release\\): $(python3 -c 'import re, sys; print(re.escape(sys.argv[1]))' "${changelog_version}")( \\(#[0-9]+\\))?$"
             case "${changelog_version}" in
               "${upstream_version}"-aio.*)
-                if printf '%s\n' "${commit_message}" | grep -Fxq "chore(release): ${changelog_version}"; then
+                if printf '%s\n' "${commit_message}" | grep -Eq "${release_commit_pattern}"; then
                   release_package_tag="${changelog_version}"
                 fi
                 ;;
