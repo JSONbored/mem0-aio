@@ -376,7 +376,7 @@ jobs:
           token: ${{ env.TRUNK_API_TOKEN }}
 
       - name: Dump Docker diagnostics
-        if: failure()
+        if: ${{ failure() || (steps.integration_pytest.conclusion == 'success' && steps.integration_pytest.outputs.exit_code != '0') }}
         run: |
           docker ps -a
           echo
