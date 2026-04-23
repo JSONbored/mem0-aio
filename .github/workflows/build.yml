@@ -298,7 +298,7 @@ jobs:
       - name: Upload unit test results to Trunk
         if: ${{ always() && env.TRUNK_API_TOKEN != '' }}
         continue-on-error: true
-        uses: trunk-io/analytics-uploader@0e6c416c9d47c105654657984e5e4f0506dd84aa # v1
+        uses: trunk-io/analytics-uploader@95a0fb8b29e45b6068304261fb518644b426a803 # v2
         env:
           TRUNK_API_TOKEN: ${{ secrets.TRUNK_API_TOKEN }}
         with:
@@ -367,7 +367,7 @@ jobs:
       - name: Upload integration test results to Trunk
         if: ${{ always() && env.TRUNK_API_TOKEN != '' }}
         continue-on-error: true
-        uses: trunk-io/analytics-uploader@0e6c416c9d47c105654657984e5e4f0506dd84aa # v1
+        uses: trunk-io/analytics-uploader@95a0fb8b29e45b6068304261fb518644b426a803 # v2
         env:
           TRUNK_API_TOKEN: ${{ secrets.TRUNK_API_TOKEN }}
         with:
