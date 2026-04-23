@@ -14,8 +14,9 @@ Every `main` build publishes:
 
 - `latest`
 - the exact pinned upstream version
-- the exact release package tag like `v2.0.0-aio.1`
 - `sha-<commit>`
+
+Release commits also publish the exact immutable release package tag, for example `v2.0.0-aio.1`. Ordinary `main` pushes do not overwrite that release tag.
 
 When Docker Hub credentials are configured, the same tag set is pushed to Docker Hub in parallel with GHCR.
 
