@@ -38,10 +38,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_COMMIT: ${{ steps.version.outputs.release_commit }}
-          WORKFLOW_NAME: CI / Mem0-AIO
+          WORKFLOW_SELECTOR: build.yml
         run: |
           runs_json="$(gh run list \
-            --workflow "${WORKFLOW_NAME}" \
+            --workflow "${WORKFLOW_SELECTOR}" \
             --commit "${RELEASE_COMMIT}" \
             --limit 20 \
             --json databaseId,headSha,status,conclusion)"
@@ -67,7 +67,7 @@ jobs:
               sys.exit(0)
 
           print(
-              f"No successful '{os.environ['WORKFLOW_NAME']}' run was found for release commit {release_commit}.",
+              f"No successful workflow run was found for release commit {release_commit} using selector {os.environ['WORKFLOW_SELECTOR']}.",
               file=sys.stderr,
           )
           sys.exit(1)
