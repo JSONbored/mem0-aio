@@ -51,7 +51,7 @@ jobs:
         run: |
           previous_tag="$(python3 scripts/release.py latest-aio-tag)"
           if [[ -n "${previous_tag}" ]]; then
-            git-cliff --config cliff.toml --tag "${RELEASE_VERSION}" "${previous_tag}..HEAD" --output CHANGELOG.md
+            git-cliff --config cliff.toml --tag "${RELEASE_VERSION}" "${previous_tag}..HEAD" --prepend CHANGELOG.md
           else
             git-cliff --config cliff.toml --tag "${RELEASE_VERSION}" --output CHANGELOG.md
           fi
