@@ -23,7 +23,7 @@ require_absent() {
 check_no_placeholder() {
 	local pattern="$1"
 	shift
-	if rg -n --fixed-strings "${pattern}" "$@" >/dev/null 2>&1; then
+	if grep -F -n -- "${pattern}" "$@" >/dev/null 2>&1; then
 		fail "found unresolved placeholder '${pattern}' in: $*"
 	fi
 }
@@ -68,7 +68,7 @@ if [[ -z ${effective_template_xml} ]]; then
 fi
 
 is_template_repo="false"
-if [[ -f .github/workflows/publish-release.yml ]] && rg -q --fixed-strings "Publish Release / Template" .github/workflows/publish-release.yml; then
+if [[ -f .github/workflows/publish-release.yml ]] && grep -F -q -- "Publish Release / Template" .github/workflows/publish-release.yml; then
 	is_template_repo="true"
 fi
 
