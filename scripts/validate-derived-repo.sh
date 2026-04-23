@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="${1:-.}"
 cd "${repo_root}"
-strict_placeholders="${STRICT_PLACEHOLDERS:-${ENABLE_AIO_AUTOMATION:-false}}"
+strict_placeholders="${STRICT_PLACEHOLDERS:-false}"
 
 fail() {
 	echo "template validation error: $*" >&2
@@ -17,7 +17,7 @@ require_file() {
 
 require_absent() {
 	local path="$1"
-	[[ ! -e ${path} ]] || fail "remove template placeholder path before enabling automation: ${path}"
+	[[ ! -e ${path} ]] || fail "remove template placeholder path in derived repo: ${path}"
 }
 
 check_no_placeholder() {
@@ -67,10 +67,16 @@ if [[ -z ${effective_template_xml} ]]; then
 	fi
 fi
 
-if [[ ${ENABLE_AIO_AUTOMATION-} == "true" ]]; then
-	[[ -n ${effective_template_xml} ]] || fail "ENABLE_AIO_AUTOMATION=true requires a root XML file"
+is_template_repo="false"
+if [[ -f .github/workflows/publish-release.yml ]] && rg -q --fixed-strings "Publish Release / Template" .github/workflows/publish-release.yml; then
+	is_template_repo="true"
+fi
+
+if [[ -n ${effective_template_xml} ]]; then
 	require_file "${effective_template_xml}"
-	require_absent "template-aio.xml"
+	if [[ ${is_template_repo} != "true" ]]; then
+		require_absent "template-aio.xml"
+	fi
 fi
 
 xml_files=()
