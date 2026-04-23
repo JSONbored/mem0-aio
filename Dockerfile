@@ -1,6 +1,6 @@
 # checkov:skip=CKV_DOCKER_3: s6 init coordinates multiple bundled services before they drop privileges, so this image does not use a single final USER instruction
 # checkov:skip=CKV_DOCKER_7: the qdrant helper stage is pinned by immutable digest instead of a mutable tag
-FROM node:24-slim@sha256:879b21aec4a1ad820c27ccd565e7c7ed955f24b92e6694556154f251e4bdb240 AS ui-builder
+FROM node:24-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2 AS ui-builder
 
 # Enable corepack for pnpm
 RUN corepack enable
