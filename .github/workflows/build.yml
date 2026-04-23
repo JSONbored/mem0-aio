@@ -387,7 +387,7 @@ jobs:
         run: exit 1
 
   publish:
-    if: ${{ (needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true') && vars.ENABLE_AIO_AUTOMATION == 'true' && github.event_name == 'push' && needs.detect-changes.outputs.publish_requested == 'true' && needs.integration-tests.result == 'success' }}
+    if: ${{ (needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true') && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.publish_requested == 'true' && needs.integration-tests.result == 'success' }}
     needs:
       - detect-changes
       - validate-template
@@ -458,28 +458,42 @@ jobs:
           sha_tag_ghcr="${image_ghcr}:sha-${GITHUB_SHA}"
           raw_version="$(sed -n 's/^ARG UPSTREAM_VERSION=//p' Dockerfile | head -n1)"
           upstream_version="${raw_version%%@*}"
+          commit_message="$(git log -1 --pretty=%B)"
+          release_package_tag=""
+          version_label="${upstream_version}"
+          wrapper_track="main"
+          wrapper_version=""
           if [[ -n "${RELEASE_TAG_OVERRIDE}" ]]; then
             release_package_tag="${RELEASE_TAG_OVERRIDE}"
           else
             changelog_version="$(python3 scripts/release.py latest-changelog-version 2>/dev/null || true)"
             case "${changelog_version}" in
               "${upstream_version}"-aio.*)
-                release_package_tag="${changelog_version}"
-                ;;
-              *)
-                release_package_tag="${upstream_version}-aio.1"
+                if printf '%s\n' "${commit_message}" | grep -Fxq "chore(release): ${changelog_version}"; then
+                  release_package_tag="${changelog_version}"
+                fi
                 ;;
             esac
+          fi
+          if [[ -n "${release_package_tag}" ]]; then
+            version_label="${release_package_tag}"
+            wrapper_track="${release_package_tag}"
+            wrapper_version="${release_package_tag}"
           fi
 
           {
             echo "upstream_version=${upstream_version}"
             echo "release_package_tag=${release_package_tag}"
+            echo "version_label=${version_label}"
+            echo "wrapper_track=${wrapper_track}"
+            echo "wrapper_version=${wrapper_version}"
             echo "tags<<EOF"
             echo "${image_ghcr}:latest"
             if [[ -n "${upstream_version}" ]]; then
               echo "${image_ghcr}:${upstream_version}"
-              echo "${image_ghcr}:${release_package_tag}"
+              if [[ -n "${release_package_tag}" ]]; then
+                echo "${image_ghcr}:${release_package_tag}"
+              fi
             fi
             echo "${sha_tag_ghcr}"
 
@@ -487,7 +501,9 @@ jobs:
               echo "${image_dockerhub}:latest"
               if [[ -n "${upstream_version}" ]]; then
                 echo "${image_dockerhub}:${upstream_version}"
-                echo "${image_dockerhub}:${release_package_tag}"
+                if [[ -n "${release_package_tag}" ]]; then
+                  echo "${image_dockerhub}:${release_package_tag}"
+                fi
               fi
               echo "${image_dockerhub}:sha-${GITHUB_SHA}"
             fi
@@ -506,18 +522,18 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/JSONbored/mem0-aio
             org.opencontainers.image.title=mem0-aio
-            org.opencontainers.image.version=${{ steps.prep.outputs.release_package_tag || '' }}
+            org.opencontainers.image.version=${{ steps.prep.outputs.version_label || '' }}
             org.opencontainers.image.description=Unraid-first AIO wrapper image for Mem0 OpenMemory with an internal Qdrant default
             io.jsonbored.upstream.name=Mem0
             io.jsonbored.upstream.version=${{ steps.prep.outputs.upstream_version || '' }}
             io.jsonbored.wrapper.name=mem0-aio
             io.jsonbored.wrapper.type=unraid-aio
-            io.jsonbored.wrapper.track=${{ steps.prep.outputs.release_package_tag || '' }}
-            io.jsonbored.wrapper.version=${{ steps.prep.outputs.release_package_tag || '' }}
+            io.jsonbored.wrapper.track=${{ steps.prep.outputs.wrapper_track || '' }}
+            io.jsonbored.wrapper.version=${{ steps.prep.outputs.wrapper_version || '' }}
           load: false
 
   sync-awesome-unraid:
-    if: ${{ needs.detect-changes.outputs.xml_related == 'true' && vars.ENABLE_AIO_AUTOMATION == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ needs.detect-changes.outputs.xml_related == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
     needs:
       - detect-changes
       - validate-template
