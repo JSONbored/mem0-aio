@@ -27,7 +27,9 @@ jobs:
           echo "release_version=${release_version}" >> "${GITHUB_OUTPUT}"
           release_commit="$(python3 scripts/release.py find-release-commit "${release_version}")"
           echo "release_commit=${release_commit}" >> "${GITHUB_OUTPUT}"
-          echo "Matched release commit ${release_commit} for ${release_version}"
+          release_target="$(python3 scripts/release.py find-release-target-commit "${release_version}")"
+          echo "release_target=${release_target}" >> "${GITHUB_OUTPUT}"
+          echo "Matched release commit ${release_commit} and target ${release_target} for ${release_version}"
           changelog_version="$(python3 scripts/release.py latest-changelog-version)"
           if [[ "${changelog_version}" != "${release_version}" ]]; then
             echo "CHANGELOG top entry ${changelog_version} does not match ${release_version}" >&2
@@ -37,7 +39,7 @@ jobs:
       - name: Require successful CI for release commit
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_COMMIT: ${{ steps.version.outputs.release_commit }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.release_target }}
           WORKFLOW_SELECTOR: build.yml
         run: |
           runs_json="$(gh run list \
@@ -89,7 +91,7 @@ jobs:
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
-          RELEASE_COMMIT: ${{ steps.version.outputs.release_commit }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.release_target }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           if git rev-parse "${RELEASE_VERSION}" >/dev/null 2>&1; then
@@ -115,7 +117,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
           RELEASE_NOTES: ${{ steps.notes.outputs.release_notes }}
-          RELEASE_COMMIT: ${{ steps.version.outputs.release_commit }}
+          RELEASE_COMMIT: ${{ steps.version.outputs.release_target }}
         run: |
           export GITHUB_TOKEN="${RELEASE_TOKEN:-${GITHUB_TOKEN}}"
 
