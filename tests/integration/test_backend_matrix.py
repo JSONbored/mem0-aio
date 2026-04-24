@@ -11,11 +11,11 @@ from urllib import error, request
 
 import pytest
 
-from tests.helpers import reserve_host_port, run_command
+from tests.helpers import reserve_host_port, run_command, start_mock_ollama_container
 
-pytestmark = pytest.mark.extended_integration
+pytestmark = [pytest.mark.integration, pytest.mark.extended_integration]
 
-OLLAMA_CONTAINER = os.environ.get("OLLAMA_CONTAINER", "ollama-temp")
+OLLAMA_CONTAINER = os.environ.get("OLLAMA_CONTAINER", "mem0-aio-ollama-mock")
 MCP_PATH = "/mcp/openmemory/http/default_user"
 BACKENDS = (
     "qdrant",
@@ -435,14 +435,23 @@ def backend_runtime(backend: str, image_tag: str):
 
 
 @pytest.fixture(scope="module")
-def backend_matrix_image(built_image: str) -> str:
-    if os.environ.get("MEM0_ENABLE_BACKEND_MATRIX") != "1":
-        pytest.skip(
-            "Set MEM0_ENABLE_BACKEND_MATRIX=1 to run the external backend matrix."
-        )
+def ollama_service() -> None:
+    started_mock = False
+    if not ollama_container_available():
+        start_mock_ollama_container(OLLAMA_CONTAINER)
+        started_mock = True
+    try:
+        yield
+    finally:
+        if started_mock:
+            run_command(["docker", "rm", "-f", OLLAMA_CONTAINER], check=False)
+
+
+@pytest.fixture(scope="module")
+def backend_matrix_image(built_image: str, ollama_service: None) -> str:
     if not ollama_container_available():
         pytest.skip(
-            f"Ollama container '{OLLAMA_CONTAINER}' is required for backend matrix tests."
+            f"Ollama container '{OLLAMA_CONTAINER}' is required for backend tests."
         )
     return built_image
 

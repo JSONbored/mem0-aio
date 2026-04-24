@@ -4,6 +4,6 @@ testpaths = ["tests"]
 junit_family = "xunit1"
 markers = [
   "integration: Docker-backed container and image tests",
-  "extended_integration: opt-in extended runtime and configuration matrix tests",
+  "extended_integration: external backend runtime and configuration matrix tests",
 ]
 addopts = ["-ra", "--strict-markers"]

@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+MOCK_OLLAMA_PATH = REPO_ROOT / "tests" / "fixtures" / "mock_ollama.py"
 
 
 def run_command(
@@ -71,6 +72,31 @@ def create_docker_volume(prefix: str) -> str:
 
 def remove_docker_volume(volume_name: str) -> None:
     run_command(["docker", "volume", "rm", "-f", volume_name], check=False)
+
+
+def start_mock_ollama_container(
+    container_name: str, *, network_name: str | None = None
+) -> None:
+    command = [
+        "docker",
+        "run",
+        "-d",
+        "--name",
+        container_name,
+    ]
+    if network_name is not None:
+        command.extend(["--network", network_name])
+    command.extend(
+        [
+            "-v",
+            f"{MOCK_OLLAMA_PATH}:/mock_ollama.py:ro",
+            "python:3.13-alpine",
+            "python",
+            "-u",
+            "/mock_ollama.py",
+        ]
+    )
+    run_command(command)
 
 
 @contextmanager

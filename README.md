@@ -89,14 +89,12 @@ CI cost model:
 - relevant PRs and `main` pushes run the fast validation layers first
 - Docker-backed integration tests run for build-relevant changes, for `main` release-metadata commits when publish is still in play, and for manual dispatches
 - image publish stays gated behind the integration suite instead of treating skipped integration as acceptable
-- the extended backend matrix remains opt-in because it is materially more expensive than the required gate
+- the external backend matrix is part of the same integration suite so supported vector-store overrides are tested before publish
 
-The optional external-backend matrix is pytest-based too. It is intentionally opt-in because it requires a prepared Ollama container plus extra sidecar services:
+The external-backend coverage uses the same pytest command. By default it starts a local mock Ollama container for deterministic embeddings; set `OLLAMA_CONTAINER` only if you intentionally want to test against an existing Ollama container:
 
 ```bash
-MEM0_ENABLE_BACKEND_MATRIX=1 \
-OLLAMA_CONTAINER=ollama-temp \
-.venv-local/bin/pytest tests/integration/test_backend_matrix.py -m extended_integration
+.venv-local/bin/pytest tests/integration -m integration
 ```
 
 ## Support
