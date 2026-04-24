@@ -387,7 +387,7 @@ jobs:
         run: exit 1
 
   publish:
-    if: ${{ (needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true') && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.publish_requested == 'true' && needs.integration-tests.result == 'success' }}
+    if: ${{ (needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true') && github.ref == 'refs/heads/main' && needs.integration-tests.result == 'success' && ((github.event_name == 'push' && needs.detect-changes.outputs.publish_requested == 'true') || github.event_name == 'workflow_dispatch') }}
     needs:
       - detect-changes
       - validate-template
@@ -448,7 +448,6 @@ jobs:
       - name: Compute image tags
         id: prep
         env:
-          RELEASE_TAG_OVERRIDE: ""
           DOCKERHUB_ENABLED: ${{ steps.dockerhub.outputs.enabled }}
           DOCKERHUB_IMAGE_NAME: ${{ steps.dockerhub.outputs.image_name }}
         run: |
@@ -463,19 +462,21 @@ jobs:
           version_label="${upstream_version}"
           wrapper_track="main"
           wrapper_version=""
-          if [[ -n "${RELEASE_TAG_OVERRIDE}" ]]; then
-            release_package_tag="${RELEASE_TAG_OVERRIDE}"
-          else
-            changelog_version="$(python3 scripts/release.py latest-changelog-version 2>/dev/null || true)"
-            release_commit_pattern="^chore\\(release\\): $(python3 -c 'import re, sys; print(re.escape(sys.argv[1]))' "${changelog_version}")( \\(#[0-9]+\\))?$"
-            case "${changelog_version}" in
-              "${upstream_version}"-aio.*)
+
+          changelog_version="$(python3 scripts/release.py latest-changelog-version 2>/dev/null || true)"
+          case "${changelog_version}" in
+            "${upstream_version}"-aio.*)
+              release_target="$(python3 scripts/release.py find-release-target-commit "${changelog_version}" 2>/dev/null || true)"
+              if [[ "${release_target}" == "${GITHUB_SHA}" || "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+                release_package_tag="${changelog_version}"
+              else
+                release_commit_pattern="^chore\\(release\\): $(python3 -c 'import re, sys; print(re.escape(sys.argv[1]))' "${changelog_version}")( \\(#[0-9]+\\))?$"
                 if printf '%s\n' "${commit_message}" | grep -Eq "${release_commit_pattern}"; then
                   release_package_tag="${changelog_version}"
                 fi
-                ;;
-            esac
-          fi
+              fi
+              ;;
+          esac
           if [[ -n "${release_package_tag}" ]]; then
             version_label="${release_package_tag}"
             wrapper_track="${release_package_tag}"

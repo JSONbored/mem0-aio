@@ -155,6 +155,38 @@ def find_release_commit(version: str) -> str:
     )
 
 
+def git_is_ancestor(ancestor: str, descendant: str) -> bool:
+    return (
+        git_completed("merge-base", "--is-ancestor", ancestor, descendant).returncode
+        == 0
+    )
+
+
+def find_release_target_commit(version: str) -> str:
+    release_commit = find_release_commit(version)
+    head = git_output("rev-parse", "HEAD").strip()
+
+    if release_commit == head:
+        return release_commit
+
+    if not git_is_ancestor(release_commit, head):
+        raise SystemExit(
+            f"Release commit {release_commit} for {version} is not reachable from HEAD."
+        )
+
+    first_parent_commits = git_output("rev-list", "--first-parent", "HEAD").splitlines()
+    if release_commit in first_parent_commits:
+        return release_commit
+
+    first_parent_path = git_output(
+        "rev-list", "--first-parent", "--reverse", f"{release_commit}..HEAD"
+    ).splitlines()
+    if first_parent_path:
+        return first_parent_path[0]
+
+    return release_commit
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Release helpers for AIO repos.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -191,6 +223,8 @@ def main() -> None:
     )
     commit_parser = subparsers.add_parser("find-release-commit")
     commit_parser.add_argument("version")
+    target_parser = subparsers.add_parser("find-release-target-commit")
+    target_parser.add_argument("version")
     args = parser.parse_args()
     if args.command == "upstream-version":
         print(read_upstream_version(args.dockerfile, args.upstream_config))
@@ -210,6 +244,8 @@ def main() -> None:
         print(latest_changelog_version(args.changelog))
     elif args.command == "find-release-commit":
         print(find_release_commit(args.version))
+    elif args.command == "find-release-target-commit":
+        print(find_release_target_commit(args.version))
     else:
         print(extract_release_notes(args.version, args.changelog))
 
