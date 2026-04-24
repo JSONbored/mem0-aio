@@ -1,6 +1,38 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [v2.0.0-aio.3](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.3) - 2026-04-24
+### CI
+- Optimize pytest gating and Trunk uploads by @JSONbored
+- Preserve changelog history and publish release commits by @JSONbored
+- Capture integration diagnostics on pytest failure by @JSONbored
+- Remove automation flag and align publish flow by @JSONbored
+- Centralize trunk config and gate release tags by @JSONbored
+- Accept squash release titles by @JSONbored
+
+
+### Dependency Updates
+- Update trunk-io/analytics-uploader action to v2 by @renovate[bot]
+- Update dependency pytest to v9 [security] by @renovate[bot]
+
+
+### Fixes
+- Make derived repo validator portable by @JSONbored
+- Use workflow file selector for CI checks by @JSONbored
+- Add authenticated qdrant support by @JSONbored
+
+
+### Other Changes
+- Merge branch 'main' into codex/ci-diagnostics-fixes by @JSONbored
+
+
+### Tests
+- Replace smoke tests with pytest by @JSONbored
+- Unify validation under pytest by @JSONbored
+- Use docker volumes for runtime persistence by @JSONbored
+- Require external backend coverage by @JSONbored
+- Clean container-owned backend storage by @JSONbored
+
 
 ## [v2.0.0-aio.2](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.2) - 2026-04-18
 

@@ -31,12 +31,25 @@
 - Actual memory generation still requires a valid LLM/embedder configuration. Leaving [code]OPENAI_API_KEY[/code] blank is fine if you are using Ollama, but you still need to provide a reachable Ollama endpoint and valid model names.&#xD;
 - Native Ollama uses the root API URL such as [code]http://host.docker.internal:11434[/code], not an OpenAI-compatible [code]/v1[/code] path. If your reverse proxy adds auth and only exposes an OpenAI-style [code]/v1[/code] endpoint, use the advanced OpenAI-compatible base URL fields instead of the native Ollama provider path.&#xD;
 - The embedded Qdrant service is intentionally bundled because that is the critical dependency for the beginner AIO path.</Overview>
-  <Changes>### 2026-04-18&#xD;
+  <Changes>### 2026-04-24&#xD;
 - Generated from CHANGELOG.md during release preparation. Do not edit manually.&#xD;
-- Align healthcheck and template auto defaults by @JSONbored&#xD;
-- Align provider auto mode and container healthcheck by @JSONbored&#xD;
-- Point openmemory submodule to maintained fork by @JSONbored&#xD;
-- Document Ollama and external backend setup by @JSONbored</Changes>
+- Optimize pytest gating and Trunk uploads by @JSONbored&#xD;
+- Preserve changelog history and publish release commits by @JSONbored&#xD;
+- Capture integration diagnostics on pytest failure by @JSONbored&#xD;
+- Remove automation flag and align publish flow by @JSONbored&#xD;
+- Centralize trunk config and gate release tags by @JSONbored&#xD;
+- Accept squash release titles by @JSONbored&#xD;
+- Update trunk-io/analytics-uploader action to v2 by @renovate[bot]&#xD;
+- Update dependency pytest to v9 [security] by @renovate[bot]&#xD;
+- Make derived repo validator portable by @JSONbored&#xD;
+- Use workflow file selector for CI checks by @JSONbored&#xD;
+- Add authenticated qdrant support by @JSONbored&#xD;
+- Merge branch 'main' into codex/ci-diagnostics-fixes by @JSONbored&#xD;
+- Replace smoke tests with pytest by @JSONbored&#xD;
+- Unify validation under pytest by @JSONbored&#xD;
+- Use docker volumes for runtime persistence by @JSONbored&#xD;
+- Require external backend coverage by @JSONbored&#xD;
+- Clean container-owned backend storage by @JSONbored</Changes>
   <Category>AI: Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>
