@@ -42,6 +42,7 @@ This repo is deliberately not a stripped-down wrapper. The template now tracks t
 - use native Ollama root URLs for the normal homelab path, or OpenAI-compatible `/v1` base URLs for auth-protected reverse proxies
 - override both LLM and embedder providers, models, API keys, and base URLs independently
 - move vector storage to Chroma, Weaviate, Redis, pgvector, Milvus, Elasticsearch, OpenSearch, or FAISS
+- use authenticated external Qdrant with `QDRANT_URL` and `QDRANT_API_KEY`
 - keep using bundled Qdrant privately by default with telemetry disabled unless you explicitly re-enable it
 - keep the bundled internal defaults for the easiest install while still exposing the upstream env surface for power users
 
@@ -52,6 +53,7 @@ The wrapper still defaults to the internal bundled storage path so new Unraid us
 - As of `2026-04-17`, upstream Mem0 has a newer stable release than the original wrapper baseline; this repo is being moved to the current stable `v2.0.0` line rather than staying on the older `v1.0.x` line.
 - The direct API / MCP port is optional for normal browser use because the UI proxies to the API over the same published web port.
 - The embedded Qdrant service is intentionally bundled because that is the critical first-boot dependency for the AIO path. External vector store support remains optional advanced configuration.
+- For authenticated external Qdrant, prefer `QDRANT_URL=http://qdrant:6333` plus `QDRANT_API_KEY` instead of only `QDRANT_HOST` and `QDRANT_PORT`.
 - Native Ollama provider support expects the root Ollama URL such as `http://host.docker.internal:11434`, not an OpenAI-compatible `/v1` path.
 - If your homelab front door adds auth and only exposes an OpenAI-style `/v1` endpoint, use the OpenAI-compatible base URL fields instead of the native Ollama provider path.
 - Elasticsearch/OpenSearch support is now wired for real external deployments, but those stacks usually need explicit auth and SSL choices. For Elasticsearch, the advanced template now exposes `ELASTICSEARCH_USE_SSL` and `ELASTICSEARCH_VERIFY_CERTS`. For OpenSearch, it now also exposes optional user/password plus `OPENSEARCH_USE_SSL` and `OPENSEARCH_VERIFY_CERTS`, with SSL defaulting to `true` to match modern secured nodes.
@@ -87,14 +89,12 @@ CI cost model:
 - relevant PRs and `main` pushes run the fast validation layers first
 - Docker-backed integration tests run for build-relevant changes, for `main` release-metadata commits when publish is still in play, and for manual dispatches
 - image publish stays gated behind the integration suite instead of treating skipped integration as acceptable
-- the extended backend matrix remains opt-in because it is materially more expensive than the required gate
+- the external backend matrix is part of the same integration suite so supported vector-store overrides are tested before publish
 
-The optional external-backend matrix is pytest-based too. It is intentionally opt-in because it requires a prepared Ollama container plus extra sidecar services:
+The external-backend coverage uses the same pytest command. By default it starts a local mock Ollama container for deterministic embeddings; set `OLLAMA_CONTAINER` only if you intentionally want to test against an existing Ollama container:
 
 ```bash
-MEM0_ENABLE_BACKEND_MATRIX=1 \
-OLLAMA_CONTAINER=ollama-temp \
-.venv-local/bin/pytest tests/integration/test_backend_matrix.py -m extended_integration
+.venv-local/bin/pytest tests/integration -m integration
 ```
 
 ## Support

@@ -11,14 +11,20 @@ from urllib import error, request
 
 import pytest
 
-from tests.helpers import reserve_host_port, run_command
+from tests.helpers import (
+    relax_container_written_path,
+    reserve_host_port,
+    run_command,
+    start_mock_ollama_container,
+)
 
-pytestmark = pytest.mark.extended_integration
+pytestmark = [pytest.mark.integration, pytest.mark.extended_integration]
 
-OLLAMA_CONTAINER = os.environ.get("OLLAMA_CONTAINER", "ollama-temp")
+OLLAMA_CONTAINER = os.environ.get("OLLAMA_CONTAINER", "mem0-aio-ollama-mock")
 MCP_PATH = "/mcp/openmemory/http/default_user"
 BACKENDS = (
     "qdrant",
+    "qdrant-auth",
     "faiss",
     "chroma",
     "redis",
@@ -74,7 +80,7 @@ def ollama_container_available() -> bool:
 
 
 def backend_ready(backend: str, backend_container: str, api_port: int) -> bool:
-    if backend in {"qdrant", "faiss"}:
+    if backend in {"qdrant", "qdrant-auth", "faiss"}:
         return True
     if backend == "chroma":
         return (
@@ -178,6 +184,19 @@ def backend_run_command(
 ) -> list[str] | None:
     if backend in {"qdrant", "faiss"}:
         return None
+    if backend == "qdrant-auth":
+        return [
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            container_name,
+            "--network",
+            network_name,
+            "-e",
+            "QDRANT__SERVICE__API_KEY=pytest-qdrant-key",
+            "qdrant/qdrant:v1.17.1",
+        ]
     if backend == "chroma":
         return [
             "docker",
@@ -286,6 +305,15 @@ def mem0_env_args(backend: str, backend_container: str) -> list[str]:
     ]
     if backend == "faiss":
         env_args.extend(["-e", "FAISS_PATH=/mem0/storage/faiss"])
+    elif backend == "qdrant-auth":
+        env_args.extend(
+            [
+                "-e",
+                f"QDRANT_URL=http://{backend_container}:6333",
+                "-e",
+                "QDRANT_API_KEY=pytest-qdrant-key",
+            ]
+        )
     elif backend == "chroma":
         env_args.extend(
             ["-e", f"CHROMA_HOST={backend_container}", "-e", "CHROMA_PORT=8000"]
@@ -408,18 +436,28 @@ def backend_runtime(backend: str, image_tag: str):
             check=False,
         )
         run_command(["docker", "network", "rm", network_name], check=False)
+        relax_container_written_path(storage_path)
         storage_dir.cleanup()
 
 
 @pytest.fixture(scope="module")
-def backend_matrix_image(built_image: str) -> str:
-    if os.environ.get("MEM0_ENABLE_BACKEND_MATRIX") != "1":
-        pytest.skip(
-            "Set MEM0_ENABLE_BACKEND_MATRIX=1 to run the external backend matrix."
-        )
+def ollama_service() -> None:
+    started_mock = False
+    if not ollama_container_available():
+        start_mock_ollama_container(OLLAMA_CONTAINER)
+        started_mock = True
+    try:
+        yield
+    finally:
+        if started_mock:
+            run_command(["docker", "rm", "-f", OLLAMA_CONTAINER], check=False)
+
+
+@pytest.fixture(scope="module")
+def backend_matrix_image(built_image: str, ollama_service: None) -> str:
     if not ollama_container_available():
         pytest.skip(
-            f"Ollama container '{OLLAMA_CONTAINER}' is required for backend matrix tests."
+            f"Ollama container '{OLLAMA_CONTAINER}' is required for backend tests."
         )
     return built_image
 

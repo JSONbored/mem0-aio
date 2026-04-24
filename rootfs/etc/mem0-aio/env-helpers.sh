@@ -10,6 +10,10 @@ mem0_uses_external_vector_store() {
 		return 0
 	fi
 
+	if [[ -n ${QDRANT_URL-} ]]; then
+		return 0
+	fi
+
 	case "${QDRANT_HOST:-127.0.0.1}" in
 	127.0.0.1 | localhost | "")
 		return 1
