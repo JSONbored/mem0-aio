@@ -160,7 +160,7 @@ jobs:
               scripts/*|.trunk/*)
                 tooling_related=true
                 ;;
-              .github/actions/*/action.yml|.github/workflows/*)
+              .github/actions/**|.github/workflows/*)
                 tooling_related=true
                 workflow_related=true
                 ;;

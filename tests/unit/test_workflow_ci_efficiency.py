@@ -34,7 +34,7 @@ def test_local_actions_participate_in_ci_change_detection_and_pin_checks() -> No
     workflow = BUILD_WORKFLOW.read_text()
 
     assert "- .github/actions/**" in workflow  # nosec B101
-    assert ".github/actions/*/action.yml|.github/workflows/*)" in workflow  # nosec B101
+    assert ".github/actions/**|.github/workflows/*)" in workflow  # nosec B101
     assert (
         'pathlib.Path(".github/actions").glob("*/action.yml")' in workflow
     )  # nosec B101
