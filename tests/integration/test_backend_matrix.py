@@ -11,7 +11,12 @@ from urllib import error, request
 
 import pytest
 
-from tests.helpers import reserve_host_port, run_command, start_mock_ollama_container
+from tests.helpers import (
+    relax_container_written_path,
+    reserve_host_port,
+    run_command,
+    start_mock_ollama_container,
+)
 
 pytestmark = [pytest.mark.integration, pytest.mark.extended_integration]
 
@@ -431,6 +436,7 @@ def backend_runtime(backend: str, image_tag: str):
             check=False,
         )
         run_command(["docker", "network", "rm", network_name], check=False)
+        relax_container_written_path(storage_path)
         storage_dir.cleanup()
 
 

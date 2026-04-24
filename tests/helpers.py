@@ -74,6 +74,23 @@ def remove_docker_volume(volume_name: str) -> None:
     run_command(["docker", "volume", "rm", "-f", volume_name], check=False)
 
 
+def relax_container_written_path(path: Path) -> None:
+    run_command(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{path}:/target",
+            "python:3.13-alpine",
+            "sh",
+            "-lc",
+            "chmod -R a+rwX /target || true",
+        ],
+        check=False,
+    )
+
+
 def start_mock_ollama_container(
     container_name: str, *, network_name: str | None = None
 ) -> None:
