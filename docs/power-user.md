@@ -66,8 +66,10 @@ These are optional and only for non-default installs:
 
 - `DATABASE_URL`
 - `QDRANT__TELEMETRY_DISABLED`
+- `QDRANT_URL`
 - `QDRANT_HOST`
 - `QDRANT_PORT`
+- `QDRANT_API_KEY`
 - `CHROMA_HOST` / `CHROMA_PORT`
 - `WEAVIATE_CLUSTER_URL` or `WEAVIATE_HOST` / `WEAVIATE_PORT`
 - `REDIS_URL`
@@ -89,3 +91,14 @@ Optional expert-only export filter env vars:
 - `EXPORT_TO_DATE`
 
 If you override those, you are intentionally stepping outside the normal single-container AIO path.
+
+## Authenticated External Qdrant
+
+For an external Qdrant container without auth, `QDRANT_HOST=qdrant` and `QDRANT_PORT=6333` are enough.
+
+For authenticated Qdrant, set:
+
+- `QDRANT_URL=http://qdrant:6333` for a plain HTTP Docker-network endpoint, or an HTTPS URL for a TLS endpoint
+- `QDRANT_API_KEY` to the Qdrant API key
+
+Do not rely on `QDRANT_HOST` + `QDRANT_PORT` alone for authenticated plain-HTTP Qdrant. The wrapper normalizes this case for compatibility, but `QDRANT_URL` is the explicit and least surprising configuration.

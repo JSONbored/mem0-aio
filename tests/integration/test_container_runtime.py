@@ -96,6 +96,24 @@ def test_happy_path_boot_and_restart(built_image: str) -> None:
                     f"http://127.0.0.1:{ui_port}/openmemory-api/api/v1/config",
                 ]
             )
+            memory_proxy_status = run_command(
+                [
+                    "curl",
+                    "-sS",
+                    "-o",
+                    "/dev/null",
+                    "-w",
+                    "%{http_code}",
+                    "-X",
+                    "POST",
+                    "-H",
+                    "Content-Type: application/json",
+                    "-d",
+                    "{}",
+                    f"http://127.0.0.1:{ui_port}/openmemory-api/api/v1/memories",
+                ]
+            ).stdout
+            assert memory_proxy_status == "422"  # nosec B101
             assert container_path_exists(
                 name, "/mem0/storage/openmemory.db"
             )  # nosec B101

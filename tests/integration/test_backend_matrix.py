@@ -19,6 +19,7 @@ OLLAMA_CONTAINER = os.environ.get("OLLAMA_CONTAINER", "ollama-temp")
 MCP_PATH = "/mcp/openmemory/http/default_user"
 BACKENDS = (
     "qdrant",
+    "qdrant-auth",
     "faiss",
     "chroma",
     "redis",
@@ -74,7 +75,7 @@ def ollama_container_available() -> bool:
 
 
 def backend_ready(backend: str, backend_container: str, api_port: int) -> bool:
-    if backend in {"qdrant", "faiss"}:
+    if backend in {"qdrant", "qdrant-auth", "faiss"}:
         return True
     if backend == "chroma":
         return (
@@ -178,6 +179,19 @@ def backend_run_command(
 ) -> list[str] | None:
     if backend in {"qdrant", "faiss"}:
         return None
+    if backend == "qdrant-auth":
+        return [
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            container_name,
+            "--network",
+            network_name,
+            "-e",
+            "QDRANT__SERVICE__API_KEY=pytest-qdrant-key",
+            "qdrant/qdrant:v1.17.1",
+        ]
     if backend == "chroma":
         return [
             "docker",
@@ -286,6 +300,15 @@ def mem0_env_args(backend: str, backend_container: str) -> list[str]:
     ]
     if backend == "faiss":
         env_args.extend(["-e", "FAISS_PATH=/mem0/storage/faiss"])
+    elif backend == "qdrant-auth":
+        env_args.extend(
+            [
+                "-e",
+                f"QDRANT_URL=http://{backend_container}:6333",
+                "-e",
+                "QDRANT_API_KEY=pytest-qdrant-key",
+            ]
+        )
     elif backend == "chroma":
         env_args.extend(
             ["-e", f"CHROMA_HOST={backend_container}", "-e", "CHROMA_PORT=8000"]
