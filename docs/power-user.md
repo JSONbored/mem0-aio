@@ -59,6 +59,8 @@ Notes:
 
 - Default persistent path: `/mem0/storage`
 - This holds the SQLite database and embedded Qdrant data for the AIO deployment
+- The vector-store selector is exclusive. Leave the defaults for bundled Qdrant, or configure exactly one external vector backend.
+- If competing selectors are present, such as `REDIS_URL` plus `PG_HOST` plus external `QDRANT_URL`, the container rejects the configuration instead of guessing.
 
 ## External Overrides
 
@@ -78,6 +80,20 @@ These are optional and only for non-default installs:
 - `ELASTICSEARCH_HOST` / `ELASTICSEARCH_PORT` / `ELASTICSEARCH_USER` / `ELASTICSEARCH_PASSWORD` / `ELASTICSEARCH_USE_SSL` / `ELASTICSEARCH_VERIFY_CERTS`
 - `OPENSEARCH_HOST` / `OPENSEARCH_PORT` / `OPENSEARCH_USER` / `OPENSEARCH_PASSWORD` / `OPENSEARCH_USE_SSL` / `OPENSEARCH_VERIFY_CERTS`
 - `FAISS_PATH`
+
+Selection order inside OpenMemory is Chroma, Weaviate, Redis, PGVector, Milvus, Elasticsearch, OpenSearch, FAISS, then Qdrant. `mem0-aio` now validates the env before startup so that priority order cannot silently hide an accidental second backend.
+
+Minimum external-backend selectors:
+
+- Qdrant: `QDRANT_URL`, or external `QDRANT_HOST` plus `QDRANT_PORT`
+- Redis: `REDIS_URL`
+- PGVector: `PG_HOST` and `PG_PORT`
+- Chroma: `CHROMA_HOST` and `CHROMA_PORT`
+- Weaviate: `WEAVIATE_CLUSTER_URL`, or `WEAVIATE_HOST` and `WEAVIATE_PORT`
+- Milvus: `MILVUS_HOST` and `MILVUS_PORT`
+- Elasticsearch: `ELASTICSEARCH_HOST` and `ELASTICSEARCH_PORT`
+- OpenSearch: `OPENSEARCH_HOST` and `OPENSEARCH_PORT`
+- FAISS: `FAISS_PATH`
 
 ## Export Helper
 
@@ -102,3 +118,5 @@ For authenticated Qdrant, set:
 - `QDRANT_API_KEY` to the Qdrant API key
 
 Do not rely on `QDRANT_HOST` + `QDRANT_PORT` alone for authenticated plain-HTTP Qdrant. The wrapper normalizes this case for compatibility, but `QDRANT_URL` is the explicit and least surprising configuration.
+
+Do not set `QDRANT_API_KEY` against the bundled `127.0.0.1:6333` default. The bundled Qdrant service is not started with API-key auth.
