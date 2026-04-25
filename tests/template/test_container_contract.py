@@ -77,6 +77,7 @@ def test_unraid_metadata_contract_is_complete_and_unprivileged() -> None:
         "Project",
         "TemplateURL",
         "Icon",
+        "Category",
         "WebUI",
     ):
         value = root.findtext(tag)
@@ -153,6 +154,7 @@ def test_dockerfile_has_runtime_safety_contract() -> None:
     assert "curl -fsS" in dockerfile  # nosec B101
     assert 'ENTRYPOINT ["/init"]' in dockerfile  # nosec B101
     assert "S6_CMD_WAIT_FOR_SERVICES_MAXTIME" in dockerfile  # nosec B101
+    assert "S6_BEHAVIOUR_IF_STAGE2_FAILS=2" in dockerfile  # nosec B101
 
 
 def test_docker_socket_mount_is_advanced_and_documented_when_present() -> None:
