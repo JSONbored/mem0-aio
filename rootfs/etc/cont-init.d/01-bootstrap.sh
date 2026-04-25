@@ -2,6 +2,9 @@
 # shellcheck shell=bash
 set -euo pipefail
 
+# shellcheck source=/dev/null
+source /etc/mem0-aio/env-helpers.sh
+
 mkdir -p /mem0/storage
 
 export USER="${USER:-default_user}"
@@ -12,6 +15,8 @@ export QDRANT_HOST="${QDRANT_HOST:-127.0.0.1}"
 export QDRANT_PORT="${QDRANT_PORT:-6333}"
 export QDRANT__TELEMETRY_DISABLED="${QDRANT__TELEMETRY_DISABLED:-true}"
 export OPENAI_API_KEY="${OPENAI_API_KEY-}"
+
+mem0_validate_vector_store_config
 
 : >/var/run/mem0-aio.env
 

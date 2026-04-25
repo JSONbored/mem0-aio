@@ -127,6 +127,7 @@ VOLUME ["/mem0/storage"]
 EXPOSE 3000 8765 6333
 
 ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=300000
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
   CMD sh -lc 'IP=$(hostname -i | awk "{print \$1}"); curl -fsS "http://${IP}:3000/" >/dev/null || exit 1'

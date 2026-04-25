@@ -46,6 +46,8 @@ This repo is deliberately not a stripped-down wrapper. The template now tracks t
 - keep using bundled Qdrant privately by default with telemetry disabled unless you explicitly re-enable it
 - keep the bundled internal defaults for the easiest install while still exposing the upstream env surface for power users
 
+External vector storage is exclusive. Configure one backend only: `REDIS_URL`, `PG_*`, external `QDRANT_*`, Chroma, Weaviate, Milvus, Elasticsearch, OpenSearch, or FAISS. The container rejects competing or partial vector-store selectors instead of letting OpenMemory silently pick the first matching backend.
+
 The wrapper still defaults to the internal bundled storage path so new Unraid users are not forced into extra services on day one.
 
 ## Runtime Notes
@@ -54,6 +56,7 @@ The wrapper still defaults to the internal bundled storage path so new Unraid us
 - The direct API / MCP port is optional for normal browser use because the UI proxies to the API over the same published web port.
 - The embedded Qdrant service is intentionally bundled because that is the critical first-boot dependency for the AIO path. External vector store support remains optional advanced configuration.
 - For authenticated external Qdrant, prefer `QDRANT_URL=http://qdrant:6333` plus `QDRANT_API_KEY` instead of only `QDRANT_HOST` and `QDRANT_PORT`.
+- Do not set `QDRANT_API_KEY` against the bundled Qdrant default. Use `QDRANT_URL` or an external `QDRANT_HOST` when Qdrant auth is enabled.
 - Native Ollama provider support expects the root Ollama URL such as `http://host.docker.internal:11434`, not an OpenAI-compatible `/v1` path.
 - If your homelab front door adds auth and only exposes an OpenAI-style `/v1` endpoint, use the OpenAI-compatible base URL fields instead of the native Ollama provider path.
 - Elasticsearch/OpenSearch support is now wired for real external deployments, but those stacks usually need explicit auth and SSL choices. For Elasticsearch, the advanced template now exposes `ELASTICSEARCH_USE_SSL` and `ELASTICSEARCH_VERIFY_CERTS`. For OpenSearch, it now also exposes optional user/password plus `OPENSEARCH_USE_SSL` and `OPENSEARCH_VERIFY_CERTS`, with SSL defaulting to `true` to match modern secured nodes.

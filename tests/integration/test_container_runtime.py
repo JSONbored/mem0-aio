@@ -123,3 +123,34 @@ def test_happy_path_boot_and_restart(built_image: str) -> None:
             assert container_path_exists(
                 name, "/mem0/storage/openmemory.db"
             )  # nosec B101
+
+
+def test_competing_vector_store_config_exits(built_image: str) -> None:
+    name = f"mem0-aio-invalid-vector-{uuid.uuid4().hex[:10]}"
+    result = run_command(
+        [
+            "docker",
+            "run",
+            "--name",
+            name,
+            "--platform",
+            "linux/amd64",
+            "-e",
+            "REDIS_URL=redis://redis:6379/0",
+            "-e",
+            "PG_HOST=postgres",
+            "-e",
+            "PG_PORT=5432",
+            "-e",
+            "QDRANT_URL=http://qdrant:6333",
+            built_image,
+        ],
+        check=False,
+    )
+    try:
+        output = result.stdout + result.stderr
+        assert result.returncode == 1  # nosec B101
+        assert "choose exactly one vector store backend" in output  # nosec B101
+        assert "redis pgvector qdrant" in output  # nosec B101
+    finally:
+        run_command(["docker", "rm", "-f", name], check=False)

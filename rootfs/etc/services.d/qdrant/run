@@ -3,6 +3,8 @@ set -euo pipefail
 
 source /etc/mem0-aio/env-helpers.sh
 
+mem0_validate_vector_store_config
+
 if mem0_uses_external_vector_store; then
     echo "External vector store configured; skipping bundled Qdrant startup."
     exec sleep infinity
