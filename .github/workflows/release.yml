@@ -8,78 +8,13 @@ permissions:
 
 jobs:
   prepare-release:
-    if: ${{ github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    uses: JSONbored/aio-fleet/.github/workflows/aio-prepare-release.yml@70792816d19763170bb5cce255a970e7fa2d45cf
     permissions:
       contents: write
       pull-requests: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Install git-cliff
-        env:
-          GIT_CLIFF_VERSION: 2.12.0
-        run: |
-          archive="git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-          curl -fsSL -o "/tmp/${archive}" "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/${archive}"
-          tar -xzf "/tmp/${archive}" -C /tmp
-          install "/tmp/git-cliff-${GIT_CLIFF_VERSION}/git-cliff" /usr/local/bin/git-cliff
-          git-cliff --version
-
-      - name: Check for unreleased changes
-        id: changes
-        run: |
-          echo "has_changes=$(python3 scripts/release.py has-unreleased-changes)" >> "${GITHUB_OUTPUT}"
-
-      - name: Compute release version
-        id: version
-        if: steps.changes.outputs.has_changes == 'true'
-        run: |
-          release_version="$(python3 scripts/release.py next-version)"
-          echo "release_version=${release_version}" >> "${GITHUB_OUTPUT}"
-
-      - name: Generate changelog
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
-        run: |
-          previous_tag="$(python3 scripts/release.py latest-aio-tag)"
-          if [[ -n "${previous_tag}" ]]; then
-            git-cliff --config cliff.toml --tag "${RELEASE_VERSION}" "${previous_tag}..HEAD" --prepend CHANGELOG.md
-          else
-            git-cliff --config cliff.toml --tag "${RELEASE_VERSION}" --output CHANGELOG.md
-          fi
-          parsed_version="$(python3 scripts/release.py latest-changelog-version)"
-          if [[ "${parsed_version}" != "${RELEASE_VERSION}" ]]; then
-            echo "Generated changelog top section ${parsed_version} does not match ${RELEASE_VERSION}" >&2
-            exit 1
-          fi
-
-      - name: Sync template Changes from changelog
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
-        run: |
-          python3 scripts/update-template-changes.py "${RELEASE_VERSION}"
-
-      - name: Create release PR
-        if: steps.changes.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          commit-message: "chore(release): ${{ steps.version.outputs.release_version }}"
-          title: "chore(release): ${{ steps.version.outputs.release_version }}"
-          body: |
-            This PR prepares `${{ steps.version.outputs.release_version }}`.
-
-            - updates `CHANGELOG.md` with `git-cliff`
-            - syncs `mem0-aio.xml` `<Changes>` from `CHANGELOG.md`
-            - is intended to be merged to `main`
-            - requires a separate manual `Publish Release / Mem0-AIO` run after merge
-          branch: "release/${{ steps.version.outputs.release_version }}"
-          delete-branch: true
+    with:
+      release_name: Mem0-AIO
+      component: ""
+      component_label: ""
+      previous_tag_command: latest-aio-tag
+    secrets: inherit

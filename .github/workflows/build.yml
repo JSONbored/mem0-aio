@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/actions/**"
       - ".github/workflows/**"
       - ".trunk/**"
       - "CHANGELOG.md"
@@ -27,7 +26,6 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - ".github/actions/**"
       - ".github/workflows/**"
       - ".trunk/**"
       - "CHANGELOG.md"
@@ -58,7 +56,7 @@ concurrency:
 
 jobs:
   aio-build:
-    uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@8e06c828cec34bbdcc6c339f01d95d738f525be8
+    uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@70792816d19763170bb5cce255a970e7fa2d45cf
     permissions:
       contents: read
       packages: write

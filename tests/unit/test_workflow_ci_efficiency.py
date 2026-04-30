@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 BUILD_WORKFLOW = Path(".github/workflows/build.yml")
-PYTEST_ACTION = Path(".github/actions/run-pytest/action.yml")
-REUSABLE_REF = "8e06c828cec34bbdcc6c339f01d95d738f525be8"
+REUSABLE_REF = "70792816d19763170bb5cce255a970e7fa2d45cf"
 EXPECTED_INPUT_LINES = [
     "app_slug: mem0-aio",
     "image_name: jsonbored/mem0-aio",
@@ -26,7 +25,6 @@ EXPECTED_INPUT_LINES = [
 ]
 EXPECTED_AGENT_INPUT_LINES = []
 EXPECTED_WATCHED_PATHS = [
-    ".github/actions/**",
     ".github/workflows/**",
     ".trunk/**",
     "CHANGELOG.md",
@@ -53,10 +51,6 @@ EXPECTED_CATALOG_ASSETS = [
     "mem0-aio.xml|mem0-aio.xml",
     "assets/app-icon.png|icons/mem0.png",
 ]
-ALLOWED_CREATE_PULL_REQUEST_REF = (
-    "peter-evans/create-pull-request@"
-    "5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1"
-)
 
 
 def _workflow() -> str:
@@ -104,16 +98,28 @@ def test_build_workflow_passes_template_and_catalog_assets() -> None:
         assert asset in workflow  # nosec B101
 
 
-def test_local_pytest_action_remains_available_to_reusable_workflow() -> None:
-    assert PYTEST_ACTION.exists()  # nosec B101
-    assert "trunk-io/analytics-uploader@" in PYTEST_ACTION.read_text()  # nosec B101
+def test_local_pytest_action_is_centralized_in_aio_fleet() -> None:
+    assert not Path(".github/actions/run-pytest/action.yml").exists()  # nosec B101
 
 
-def test_release_workflows_use_org_allowed_create_pull_request_pin() -> None:
-    workflow_paths = list(Path(".github/workflows").glob("release*.yml"))
+def test_release_and_upstream_workflows_use_pinned_aio_fleet_reusable_workflows() -> (
+    None
+):
+    workflow_paths = [
+        Path(".github/workflows/check-upstream.yml"),
+        Path(".github/workflows/release.yml"),
+        Path(".github/workflows/publish-release.yml"),
+    ]
+    for optional_path in [
+        Path(".github/workflows/release-agent.yml"),
+        Path(".github/workflows/publish-release-agent.yml"),
+    ]:
+        if optional_path.exists():
+            workflow_paths.append(optional_path)
+
     for workflow_path in workflow_paths:
         workflow = workflow_path.read_text()
-        if "peter-evans/create-pull-request@" not in workflow:
-            continue
-        assert ALLOWED_CREATE_PULL_REQUEST_REF in workflow  # nosec B101
-        assert "peter-evans/create-pull-request@c0f553" not in workflow  # nosec B101
+        assert "uses: JSONbored/aio-fleet/.github/workflows/" in workflow  # nosec B101
+        assert f"@{REUSABLE_REF}" in workflow  # nosec B101
+        assert "@main" not in workflow  # nosec B101
+        assert "peter-evans/create-pull-request@" not in workflow  # nosec B101
