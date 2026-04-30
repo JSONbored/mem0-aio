@@ -2,17 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+BUILD_WORKFLOW = Path(".github/workflows/build.yml")
 
-def test_publish_checkout_fetches_full_history_before_release_target_lookup() -> None:
-    workflow = Path(".github/workflows/build.yml").read_text()
-    release_lookup = (
-        'release_target="$(python3 scripts/release.py find-release-target-commit'
+
+def test_release_target_lookup_lives_in_pinned_fleet_workflow() -> None:
+    workflow = BUILD_WORKFLOW.read_text()
+
+    assert (  # nosec B101
+        "uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@" in workflow
     )
-    release_lookup_index = workflow.index(release_lookup)
-    checkout_index = workflow.rfind("uses: actions/checkout@", 0, release_lookup_index)
-
-    assert checkout_index != -1  # nosec B101
-
-    checkout_block = workflow[checkout_index:release_lookup_index]
-
-    assert "fetch-depth: 0" in checkout_block  # nosec B101
+    assert "@main" not in workflow  # nosec B101
+    assert "scripts/release.py find-release-target-commit" not in workflow  # nosec B101
+    assert "fetch-depth: 0" not in workflow  # nosec B101
