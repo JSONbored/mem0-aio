@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   publish-release:
-    uses: JSONbored/aio-fleet/.github/workflows/aio-publish-release.yml@c2c7c9a58496ce5c65e8952dc57fe455f8547833
+    uses: JSONbored/aio-fleet/.github/workflows/aio-publish-release.yml@294c30f6f88dcabf2ef7467f0def0ad4e3b18b74
     permissions:
       actions: read
       contents: write
