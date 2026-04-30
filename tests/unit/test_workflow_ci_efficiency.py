@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 BUILD_WORKFLOW = Path(".github/workflows/build.yml")
-REUSABLE_REF = "70792816d19763170bb5cce255a970e7fa2d45cf"
+REUSABLE_REF = "c8cfa2e0d5e02e5c22e54647a7f32310a10acfac"
 EXPECTED_INPUT_LINES = [
     "app_slug: mem0-aio",
     "image_name: jsonbored/mem0-aio",
