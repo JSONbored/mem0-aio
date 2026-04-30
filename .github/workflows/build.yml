@@ -1,54 +1,51 @@
-name: CI / Mem0-AIO
+name: CI / Mem0 AIO
 
 on:
   push:
     branches: [main]
     paths:
-      - Dockerfile
-      - pyproject.toml
-      - requirements-dev.txt
-      - openmemory
-      - rootfs/**
-      - scripts/**
-      - tests/**
-      - .trunk/**
-      - .github/actions/**
-      - upstream.toml
-      - mem0-aio.xml
-      - CHANGELOG.md
-      - cliff.toml
-      - assets/**
-      - renovate.json
-      - .github/workflows/**
+      - ".github/workflows/**"
+      - ".trunk/**"
+      - "CHANGELOG.md"
+      - "Dockerfile"
+      - "assets/**"
+      - "cliff.toml"
+      - "components.toml"
+      - "components/**"
+      - "docs/upstream/**"
+      - "mem0-aio.xml"
+      - "openmemory"
+      - "openmemory/**"
+      - "pyproject.toml"
+      - "renovate.json"
+      - "requirements-dev.txt"
+      - "rootfs/**"
+      - "scripts/**"
+      - "tests/**"
+      - "upstream.toml"
   pull_request:
     branches: [main]
     paths:
-      - Dockerfile
-      - pyproject.toml
-      - requirements-dev.txt
-      - openmemory
-      - rootfs/**
-      - scripts/**
-      - tests/**
-      - .trunk/**
-      - .github/actions/**
-      - upstream.toml
-      - mem0-aio.xml
-      - CHANGELOG.md
-      - cliff.toml
-      - assets/**
-      - renovate.json
-      - .github/workflows/**
+      - ".github/workflows/**"
+      - ".trunk/**"
+      - "CHANGELOG.md"
+      - "Dockerfile"
+      - "assets/**"
+      - "cliff.toml"
+      - "components.toml"
+      - "components/**"
+      - "docs/upstream/**"
+      - "mem0-aio.xml"
+      - "openmemory"
+      - "openmemory/**"
+      - "pyproject.toml"
+      - "renovate.json"
+      - "requirements-dev.txt"
+      - "rootfs/**"
+      - "scripts/**"
+      - "tests/**"
+      - "upstream.toml"
   workflow_dispatch:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  REGISTRY: ghcr.io
-  IMAGE_NAME: jsonbored/mem0-aio
-  PUBLISH_PLATFORMS: linux/amd64,linux/arm64
-  PYTHON_VERSION: "3.13"
-  TRUNK_ORG_URL_SLUG: aethereal
-  DOCKER_CACHE_SCOPE: mem0-aio-image
 
 permissions:
   contents: read
@@ -58,504 +55,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      build_related: ${{ steps.filter.outputs.build_related }}
-      xml_related: ${{ steps.filter.outputs.xml_related }}
-      renovate_related: ${{ steps.filter.outputs.renovate_related }}
-      tooling_related: ${{ steps.filter.outputs.tooling_related }}
-      workflow_related: ${{ steps.filter.outputs.workflow_related }}
-      run_tests_requested: ${{ steps.filter.outputs.run_tests_requested }}
-      publish_requested: ${{ steps.filter.outputs.publish_requested }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          submodules: recursive
-
-      - name: Classify changed files
-        id: filter
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before || '' }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          GITHUB_SHA_VALUE: ${{ github.sha }}
-          GITHUB_REF_VALUE: ${{ github.ref }}
-        run: |
-          python3 scripts/ci_flags.py \
-            --event-name "${EVENT_NAME}" \
-            --ref "${GITHUB_REF_VALUE}" >> "${GITHUB_OUTPUT}"
-
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
-            echo "build_related=true" >> "${GITHUB_OUTPUT}"
-            echo "xml_related=true" >> "${GITHUB_OUTPUT}"
-            echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
-            echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
-            echo "workflow_related=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
-            base="${BASE_SHA}"
-            head="${HEAD_SHA}"
-          else
-            base="${BEFORE_SHA}"
-            head="${GITHUB_SHA_VALUE}"
-          fi
-
-          if ! git rev-parse --git-dir >/dev/null 2>&1; then
-            echo "Git metadata is unavailable; treating the workflow as fully impacted."
-            echo "build_related=true" >> "${GITHUB_OUTPUT}"
-            echo "xml_related=true" >> "${GITHUB_OUTPUT}"
-            echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
-            echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
-            echo "workflow_related=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          if [[ -z "${base}" || "${base}" =~ ^0+$ ]]; then
-            if ! changed_files="$(git show --pretty='' --name-only "${head}" 2>/dev/null)"; then
-              echo "Unable to inspect commit range; treating the workflow as fully impacted."
-              echo "build_related=true" >> "${GITHUB_OUTPUT}"
-              echo "xml_related=true" >> "${GITHUB_OUTPUT}"
-              echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
-              echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
-              echo "workflow_related=true" >> "${GITHUB_OUTPUT}"
-              exit 0
-            fi
-          else
-            if ! changed_files="$(git diff --name-only "${base}" "${head}" 2>/dev/null)"; then
-              echo "Unable to diff commit range; treating the workflow as fully impacted."
-              echo "build_related=true" >> "${GITHUB_OUTPUT}"
-              echo "xml_related=true" >> "${GITHUB_OUTPUT}"
-              echo "renovate_related=true" >> "${GITHUB_OUTPUT}"
-              echo "tooling_related=true" >> "${GITHUB_OUTPUT}"
-              echo "workflow_related=true" >> "${GITHUB_OUTPUT}"
-              exit 0
-            fi
-          fi
-
-          printf 'Changed files:\n%s\n' "${changed_files}"
-
-          build_related=false
-          xml_related=false
-          renovate_related=false
-          tooling_related=false
-          workflow_related=false
-
-          while IFS= read -r path; do
-            [[ -z "${path}" ]] && continue
-            case "${path}" in
-              Dockerfile|pyproject.toml|requirements-dev.txt|upstream.toml|openmemory|rootfs/*|openmemory/*|tests/*)
-                build_related=true
-                ;;
-              mem0-aio.xml|assets/*|CHANGELOG.md|cliff.toml)
-                xml_related=true
-                ;;
-              scripts/*|.trunk/*)
-                tooling_related=true
-                ;;
-              .github/actions/**|.github/workflows/*)
-                tooling_related=true
-                workflow_related=true
-                ;;
-              renovate.json)
-                renovate_related=true
-                ;;
-            esac
-          done <<< "${changed_files}"
-
-          echo "build_related=${build_related}" >> "${GITHUB_OUTPUT}"
-          echo "xml_related=${xml_related}" >> "${GITHUB_OUTPUT}"
-          echo "renovate_related=${renovate_related}" >> "${GITHUB_OUTPUT}"
-          echo "tooling_related=${tooling_related}" >> "${GITHUB_OUTPUT}"
-          echo "workflow_related=${workflow_related}" >> "${GITHUB_OUTPUT}"
-
-  validate-template:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true' || needs.detect-changes.outputs.renovate_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
-
-      - name: Validate shell and python scripts
-        if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
-        run: |
-          bash -n scripts/validate-derived-repo.sh
-          PYTHONPYCACHEPREFIX=/tmp/mem0-aio-pyc python3 -m py_compile scripts/ci_flags.py
-          PYTHONPYCACHEPREFIX=/tmp/mem0-aio-pyc python3 -m py_compile scripts/check-upstream.py
-          PYTHONPYCACHEPREFIX=/tmp/mem0-aio-pyc python3 -m py_compile scripts/validate-template.py
-          PYTHONPYCACHEPREFIX=/tmp/mem0-aio-pyc python3 -m py_compile scripts/update-template-changes.py
-          PYTHONPYCACHEPREFIX=/tmp/mem0-aio-pyc python3 -m py_compile scripts/release.py
-          find rootfs -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
-          find rootfs -type f -path '*/run' -print0 | xargs -0 -n1 bash -n
-
-      - name: Validate Renovate config
-        if: ${{ needs.detect-changes.outputs.renovate_related == 'true' }}
-        run: npx --yes --package renovate renovate-config-validator renovate.json
-
-  pinned-actions:
-    needs: detect-changes
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Skip when workflow files are unchanged
-        if: ${{ needs.detect-changes.outputs.workflow_related != 'true' }}
-        run: echo "Workflow files unchanged; skipping pinned action scan."
-
-      - name: Checkout
-        if: ${{ needs.detect-changes.outputs.workflow_related == 'true' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Enforce pinned action SHAs
-        if: ${{ needs.detect-changes.outputs.workflow_related == 'true' }}
-        run: |
-          python3 - <<'PY'
-          import pathlib
-          import re
-          import sys
-
-          workflow_paths = [
-              *pathlib.Path(".github/workflows").glob("*.yml"),
-              *pathlib.Path(".github/actions").glob("*/action.yml"),
-          ]
-          pattern = re.compile(r"^\s*uses:\s*([^@\s]+)@([^\s#]+)")
-          sha_pattern = re.compile(r"^[0-9a-f]{40}$")
-          failures = []
-
-          for path in sorted(workflow_paths):
-              for lineno, line in enumerate(path.read_text().splitlines(), start=1):
-                  match = pattern.match(line)
-                  if not match:
-                      continue
-                  target, ref = match.groups()
-                  if target.startswith("./"):
-                      continue
-                  if not sha_pattern.fullmatch(ref):
-                      failures.append(f"{path}:{lineno}: action is not pinned to a full SHA -> {line.strip()}")
-
-          if failures:
-              print("\n".join(failures), file=sys.stderr)
-              sys.exit(1)
-          print("All workflow actions are pinned to full commit SHAs.")
-          PY
-
-  dependency-review:
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Dependency review
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
-
-  unit-tests:
-    if: ${{ needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true' || needs.detect-changes.outputs.tooling_related == 'true' }}
-    needs:
-      - detect-changes
-      - validate-template
-      - pinned-actions
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      TRUNK_API_TOKEN: ${{ secrets.TRUNK_API_TOKEN }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          submodules: recursive
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: requirements-dev.txt
-
-      - name: Install pytest
-        run: python -m pip install -r requirements-dev.txt
-
-      - name: Run unit and template tests
-        uses: ./.github/actions/run-pytest
-        with:
-          junit-path: reports/pytest-unit.xml
-          pytest-args: tests/unit tests/template
-          trunk-api-token: ${{ env.TRUNK_API_TOKEN }}
-          trunk-org-slug: ${{ env.TRUNK_ORG_URL_SLUG }}
-
-  integration-tests:
-    if: ${{ needs.detect-changes.outputs.run_tests_requested == 'true' && (needs.detect-changes.outputs.build_related == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.publish_requested == 'true')) }}
-    needs:
-      - detect-changes
-      - validate-template
-      - pinned-actions
-      - unit-tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      TRUNK_API_TOKEN: ${{ secrets.TRUNK_API_TOKEN }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          submodules: recursive
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: requirements-dev.txt
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-      - name: Prebuild pytest image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        with:
-          context: .
-          platforms: linux/amd64
-          load: true
-          tags: mem0-aio:pytest
-          cache-from: type=gha,scope=${{ env.DOCKER_CACHE_SCOPE }}
-          cache-to: type=gha,mode=max,scope=${{ env.DOCKER_CACHE_SCOPE }}
-
-      - name: Install pytest
-        run: python -m pip install -r requirements-dev.txt
-
-      - name: Run integration tests
-        env:
-          AIO_PYTEST_USE_PREBUILT_IMAGE: "true"
-        uses: ./.github/actions/run-pytest
-        with:
-          junit-path: reports/pytest-integration.xml
-          pytest-args: tests/integration -m integration
-          trunk-api-token: ${{ env.TRUNK_API_TOKEN }}
-          trunk-org-slug: ${{ env.TRUNK_ORG_URL_SLUG }}
-
-      - name: Dump Docker diagnostics
-        if: ${{ failure() }}
-        run: |
-          docker ps -a
-          echo
-          docker images
-
-  publish:
-    if: ${{ (needs.detect-changes.outputs.build_related == 'true' || needs.detect-changes.outputs.xml_related == 'true') && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.publish_requested == 'true' && needs.integration-tests.result == 'success' }}
-    needs:
-      - detect-changes
-      - validate-template
-      - pinned-actions
-      - unit-tests
-      - integration-tests
-    runs-on: ubuntu-latest
+  aio-build:
+    uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@aab4f9852ef6ead106f17d23d9400d627fd67dac
     permissions:
       contents: read
       packages: write
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          submodules: recursive
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
-      - name: Login to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Resolve Docker Hub publish settings
-        id: dockerhub
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          DOCKERHUB_IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME }}
-          DOCKERHUB_IMAGE_NAME_SECRET: ${{ secrets.DOCKERHUB_IMAGE_NAME }}
-        run: |
-          if [[ -n "${DOCKERHUB_USERNAME}" && -n "${DOCKERHUB_TOKEN}" ]]; then
-            echo "enabled=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "enabled=false" >> "${GITHUB_OUTPUT}"
-          fi
-
-          resolved_image_name="${DOCKERHUB_IMAGE_NAME:-${DOCKERHUB_IMAGE_NAME_SECRET}}"
-          if [[ -n "${resolved_image_name}" ]]; then
-            echo "image_name=${resolved_image_name}" >> "${GITHUB_OUTPUT}"
-          else
-            echo "image_name=${IMAGE_NAME}" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Login to Docker Hub
-        if: ${{ steps.dockerhub.outputs.enabled == 'true' }}
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Compute image tags
-        id: prep
-        env:
-          RELEASE_TAG_OVERRIDE: ""
-          DOCKERHUB_ENABLED: ${{ steps.dockerhub.outputs.enabled }}
-          DOCKERHUB_IMAGE_NAME: ${{ steps.dockerhub.outputs.image_name }}
-        run: |
-          image_ghcr="$(printf '%s' "${REGISTRY}/${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
-          dockerhub_image_name="${DOCKERHUB_IMAGE_NAME:-${IMAGE_NAME}}"
-          image_dockerhub="$(printf '%s' "${dockerhub_image_name}" | tr '[:upper:]' '[:lower:]')"
-          sha_tag_ghcr="${image_ghcr}:sha-${GITHUB_SHA}"
-          raw_version="$(sed -n 's/^ARG UPSTREAM_VERSION=//p' Dockerfile | head -n1)"
-          upstream_version="${raw_version%%@*}"
-          commit_message="$(git log -1 --pretty=%B)"
-          release_package_tag=""
-          version_label="${upstream_version}"
-          wrapper_track="main"
-          wrapper_version=""
-          if [[ -n "${RELEASE_TAG_OVERRIDE}" ]]; then
-            release_package_tag="${RELEASE_TAG_OVERRIDE}"
-          else
-            changelog_version="$(python3 scripts/release.py latest-changelog-version 2>/dev/null || true)"
-            case "${changelog_version}" in
-              "${upstream_version}"-aio.*)
-                release_target="$(python3 scripts/release.py find-release-target-commit "${changelog_version}" 2>/dev/null || true)"
-                if [[ "${release_target}" == "${GITHUB_SHA}" ]]; then
-                  release_package_tag="${changelog_version}"
-                else
-                  release_commit_pattern="^chore\\(release\\): $(python3 -c 'import re, sys; print(re.escape(sys.argv[1]))' "${changelog_version}")( \\(#[0-9]+\\))?$"
-                  if printf '%s\n' "${commit_message}" | grep -Eq "${release_commit_pattern}"; then
-                    release_package_tag="${changelog_version}"
-                  fi
-                fi
-                ;;
-            esac
-          fi
-          if [[ -n "${release_package_tag}" ]]; then
-            version_label="${release_package_tag}"
-            wrapper_track="${release_package_tag}"
-            wrapper_version="${release_package_tag}"
-          fi
-
-          {
-            echo "upstream_version=${upstream_version}"
-            echo "release_package_tag=${release_package_tag}"
-            echo "version_label=${version_label}"
-            echo "wrapper_track=${wrapper_track}"
-            echo "wrapper_version=${wrapper_version}"
-            echo "tags<<EOF"
-            echo "${image_ghcr}:latest"
-            if [[ -n "${upstream_version}" ]]; then
-              echo "${image_ghcr}:${upstream_version}"
-              if [[ -n "${release_package_tag}" ]]; then
-                echo "${image_ghcr}:${release_package_tag}"
-              fi
-            fi
-            echo "${sha_tag_ghcr}"
-
-            if [[ "${DOCKERHUB_ENABLED}" == "true" ]]; then
-              echo "${image_dockerhub}:latest"
-              if [[ -n "${upstream_version}" ]]; then
-                echo "${image_dockerhub}:${upstream_version}"
-                if [[ -n "${release_package_tag}" ]]; then
-                  echo "${image_dockerhub}:${release_package_tag}"
-                fi
-              fi
-              echo "${image_dockerhub}:sha-${GITHUB_SHA}"
-            fi
-            echo "EOF"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Build and push
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        with:
-          context: .
-          platforms: ${{ env.PUBLISH_PLATFORMS }}
-          push: true
-          cache-from: type=gha,scope=${{ env.DOCKER_CACHE_SCOPE }}
-          cache-to: type=gha,mode=max,scope=${{ env.DOCKER_CACHE_SCOPE }}
-          tags: ${{ steps.prep.outputs.tags }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/JSONbored/mem0-aio
-            org.opencontainers.image.title=mem0-aio
-            org.opencontainers.image.version=${{ steps.prep.outputs.version_label || '' }}
-            org.opencontainers.image.description=Unraid-first AIO wrapper image for Mem0 OpenMemory with an internal Qdrant default
-            io.jsonbored.upstream.name=Mem0
-            io.jsonbored.upstream.version=${{ steps.prep.outputs.upstream_version || '' }}
-            io.jsonbored.wrapper.name=mem0-aio
-            io.jsonbored.wrapper.type=unraid-aio
-            io.jsonbored.wrapper.track=${{ steps.prep.outputs.wrapper_track || '' }}
-            io.jsonbored.wrapper.version=${{ steps.prep.outputs.wrapper_version || '' }}
-          load: false
-
-  sync-awesome-unraid:
-    if: ${{ needs.detect-changes.outputs.xml_related == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
-    needs:
-      - detect-changes
-      - validate-template
-      - pinned-actions
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check sync configuration
-        env:
-          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
-        run: |
-          if [[ -z "${SYNC_TOKEN}" ]]; then
-            echo "SYNC_ENABLED=false" >> "${GITHUB_ENV}"
-            echo "SYNC_TOKEN is not configured; skipping sync."
-          else
-            echo "SYNC_ENABLED=true" >> "${GITHUB_ENV}"
-          fi
-
-      - name: Checkout Source Repository
-        if: ${{ env.SYNC_ENABLED == 'true' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Checkout Target Repository
-        if: ${{ env.SYNC_ENABLED == 'true' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          repository: JSONbored/awesome-unraid
-          token: ${{ secrets.SYNC_TOKEN }}
-          path: target-repo
-
-      - name: Copy template and icon
-        if: ${{ env.SYNC_ENABLED == 'true' }}
-        run: |
-          cp mem0-aio.xml target-repo/mem0-aio.xml
-          mkdir -p target-repo/icons
-          cp assets/mem0.jpeg target-repo/icons/mem0.jpeg
-
-      - name: Create sync pull request
-        if: ${{ env.SYNC_ENABLED == 'true' }}
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          token: ${{ secrets.SYNC_TOKEN }}
-          path: target-repo
-          add-paths: |
-            mem0-aio.xml
-            icons/mem0.jpeg
-          commit-message: "docs(catalog): sync mem0-aio template assets"
-          branch: sync-awesome-unraid/mem0-aio
-          delete-branch: true
-          base: main
-          title: "docs(catalog): sync mem0-aio template assets"
-          body: |
-            Automated sync from `JSONbored/mem0-aio`.
+      pull-requests: write
+    with:
+      app_slug: mem0-aio
+      image_name: jsonbored/mem0-aio
+      workflow_title: CI / Mem0 AIO
+      docker_cache_scope: mem0-aio-image
+      pytest_image_tag: mem0-aio:pytest
+      publish_profile: changelog-version
+      upstream_name: Mem0
+      image_description: Unraid-first AIO wrapper image for Mem0 and OpenMemory
+      python_version: "3.13"
+      trunk_org_slug: aethereal
+      publish_platforms: linux/amd64,linux/arm64
+      checkout_submodules: true
+      integration_pytest_args: tests/integration -m integration
+      run_extended_integration: false
+      extended_integration_pytest_args: ""
+      generator_check_command: ""
+      upstream_digest_arg: UPSTREAM_IMAGE_DIGEST
+      xml_paths: |
+        mem0-aio.xml
+        assets/**
+      extra_publish_paths: |
+        openmemory
+        openmemory/**
+      catalog_assets: |
+        mem0-aio.xml|mem0-aio.xml
+        assets/mem0.jpeg|icons/mem0.jpeg
+    secrets: inherit

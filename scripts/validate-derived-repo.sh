@@ -31,8 +31,6 @@ check_no_placeholder() {
 require_file "Dockerfile"
 require_file "README.md"
 require_file "pyproject.toml"
-require_file "scripts/ci_flags.py"
-require_file "tests/unit/test_ci_flags.py"
 require_file "tests/template/test_validate_template.py"
 require_file "tests/integration/test_container_runtime.py"
 require_file "scripts/validate-template.py"
