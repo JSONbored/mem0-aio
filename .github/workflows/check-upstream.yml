@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   check-upstream:
-    uses: JSONbored/aio-fleet/.github/workflows/aio-check-upstream.yml@4aea17371db2faf5ba759cda63b4f46aac514162
+    uses: JSONbored/aio-fleet/.github/workflows/aio-check-upstream.yml@c2c7c9a58496ce5c65e8952dc57fe455f8547833
     permissions:
       contents: write
       pull-requests: write
