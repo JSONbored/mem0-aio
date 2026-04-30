@@ -87,5 +87,5 @@ jobs:
         openmemory/**
       catalog_assets: |
         mem0-aio.xml|mem0-aio.xml
-        assets/app-icon.png|icons/mem0.png
+        assets/mem0.jpeg|icons/mem0.jpeg
     secrets: inherit
