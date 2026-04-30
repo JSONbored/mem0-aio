@@ -9,7 +9,7 @@ if [[ ${strict_placeholders} == "true" ]]; then
 	args+=(--strict-placeholders)
 fi
 
-if python3 -c "import aio_fleet" >/dev/null 2>&1; then
+if python3 -c "import aio_fleet.cli" >/dev/null 2>&1; then
 	exec python3 -m aio_fleet.cli "${args[@]}"
 fi
 
@@ -27,7 +27,11 @@ candidate_roots+=(
 
 for candidate in "${candidate_roots[@]}"; do
 	if [[ -d ${candidate}/src/aio_fleet ]]; then
-		PYTHONPATH="${candidate}/src${PYTHONPATH:+:${PYTHONPATH}}" exec python3 -m aio_fleet.cli "${args[@]}"
+		python_bin="python3"
+		if [[ -x ${candidate}/.venv/bin/python ]]; then
+			python_bin="${candidate}/.venv/bin/python"
+		fi
+		PYTHONPATH="${candidate}/src${PYTHONPATH:+:${PYTHONPATH}}" exec "${python_bin}" -m aio_fleet.cli "${args[@]}"
 	fi
 done
 

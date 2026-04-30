@@ -4,59 +4,59 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/**"
-      - ".github/workflows/**"
-      - ".trunk/**"
-      - "AGENTS.md"
-      - "CHANGELOG.md"
-      - "Dockerfile"
-      - "README.md"
-      - "SECURITY.md"
-      - "SUPPORT.md"
-      - "assets/**"
-      - "cliff.toml"
-      - "components.toml"
-      - "components/**"
-      - "docs/**"
-      - "docs/upstream/**"
-      - "mem0-aio.xml"
-      - "openmemory"
-      - "openmemory/**"
-      - "pyproject.toml"
-      - "renovate.json"
-      - "requirements-dev.txt"
-      - "rootfs/**"
-      - "scripts/**"
-      - "tests/**"
-      - "upstream.toml"
+      - .github/**
+      - .github/workflows/**
+      - .trunk/**
+      - AGENTS.md
+      - CHANGELOG.md
+      - Dockerfile
+      - README.md
+      - SECURITY.md
+      - SUPPORT.md
+      - assets/**
+      - cliff.toml
+      - components.toml
+      - components/**
+      - docs/**
+      - docs/upstream/**
+      - mem0-aio.xml
+      - openmemory
+      - openmemory/**
+      - pyproject.toml
+      - renovate.json
+      - requirements-dev.txt
+      - rootfs/**
+      - scripts/**
+      - tests/**
+      - upstream.toml
   pull_request:
     branches: [main]
     paths:
-      - ".github/**"
-      - ".github/workflows/**"
-      - ".trunk/**"
-      - "AGENTS.md"
-      - "CHANGELOG.md"
-      - "Dockerfile"
-      - "README.md"
-      - "SECURITY.md"
-      - "SUPPORT.md"
-      - "assets/**"
-      - "cliff.toml"
-      - "components.toml"
-      - "components/**"
-      - "docs/**"
-      - "docs/upstream/**"
-      - "mem0-aio.xml"
-      - "openmemory"
-      - "openmemory/**"
-      - "pyproject.toml"
-      - "renovate.json"
-      - "requirements-dev.txt"
-      - "rootfs/**"
-      - "scripts/**"
-      - "tests/**"
-      - "upstream.toml"
+      - .github/**
+      - .github/workflows/**
+      - .trunk/**
+      - AGENTS.md
+      - CHANGELOG.md
+      - Dockerfile
+      - README.md
+      - SECURITY.md
+      - SUPPORT.md
+      - assets/**
+      - cliff.toml
+      - components.toml
+      - components/**
+      - docs/**
+      - docs/upstream/**
+      - mem0-aio.xml
+      - openmemory
+      - openmemory/**
+      - pyproject.toml
+      - renovate.json
+      - requirements-dev.txt
+      - rootfs/**
+      - scripts/**
+      - tests/**
+      - upstream.toml
   workflow_dispatch:
 
 permissions:
@@ -68,7 +68,7 @@ concurrency:
 
 jobs:
   aio-build:
-    uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@388300f0f98701ea81bd8185660257d06cd8f472
+    uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@4aea17371db2faf5ba759cda63b4f46aac514162
     permissions:
       contents: read
       packages: write
