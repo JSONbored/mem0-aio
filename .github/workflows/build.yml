@@ -56,7 +56,7 @@ concurrency:
 
 jobs:
   aio-build:
-    uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@ba033c4af5d16e7fcb4962f77e527eb5d86782fa
+    uses: JSONbored/aio-fleet/.github/workflows/aio-build.yml@337b82e04d6d1b887c704326a967bb1b10416752
     permissions:
       contents: read
       packages: write
@@ -79,6 +79,7 @@ jobs:
       extended_integration_pytest_args: ""
       generator_check_command: ""
       upstream_digest_arg: UPSTREAM_IMAGE_DIGEST
+      catalog_published: true
       xml_paths: |
         mem0-aio.xml
         assets/**
