@@ -69,7 +69,7 @@ The wrapper still defaults to the internal bundled storage path so new Unraid us
 - Release notes are generated with `git-cliff`.
 - The Unraid template `<Changes>` block is synced from `CHANGELOG.md` during release preparation.
 - `main` publishes `latest`, the pinned upstream version tag, an explicit AIO packaging line tag, and `sha-<commit>`.
-- When Docker Hub credentials are configured, the same publish flow pushes Docker Hub tags in parallel with GHCR so the CA template can read Docker Hub metadata.
+- Publish jobs require Docker Hub credentials and push the CA-facing Docker Hub tags directly.
 
 See [docs/releases.md](docs/releases.md) for the release workflow details.
 
