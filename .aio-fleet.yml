@@ -13,20 +13,80 @@ release:
   previous_tag_command: latest-aio-tag
 upstream:
   name: Mem0
+  version_key: UPSTREAM_VERSION
   digest_arg: UPSTREAM_IMAGE_DIGEST
 template:
   xml_paths:
-  - mem0-aio.xml
-  - assets/**
+    - mem0-aio.xml
+    - assets/**
   generated: false
 catalog:
   published: true
   assets:
-  - source: mem0-aio.xml
-    target: mem0-aio.xml
-  - source: assets/mem0.jpeg
-    target: icons/mem0.jpeg
+    - source: mem0-aio.xml
+      target: mem0-aio.xml
+    - source: assets/mem0.jpeg
+      target: icons/mem0.jpeg
 tests:
-  unit: tests/unit tests/template
+  unit: tests/template
   integration: tests/integration -m integration
   checkout_submodules: true
+validation:
+  required_targets:
+    - /mem0/storage
+    - "3000"
+    - "8765"
+    - API_KEY
+    - CHROMA_HOST
+    - CHROMA_PORT
+    - DATABASE_URL
+    - ELASTICSEARCH_HOST
+    - ELASTICSEARCH_PASSWORD
+    - ELASTICSEARCH_PORT
+    - ELASTICSEARCH_USER
+    - ELASTICSEARCH_USE_SSL
+    - ELASTICSEARCH_VERIFY_CERTS
+    - EMBEDDER_API_KEY
+    - EMBEDDER_BASE_URL
+    - EMBEDDER_DIMENSIONS
+    - EMBEDDER_MODEL
+    - EMBEDDER_PROVIDER
+    - EXPORT_APP_ID
+    - EXPORT_FROM_DATE
+    - EXPORT_TO_DATE
+    - EXPORT_USER_ID
+    - FAISS_PATH
+    - LLM_API_KEY
+    - LLM_BASE_URL
+    - LLM_MODEL
+    - LLM_PROVIDER
+    - MILVUS_DB_NAME
+    - MILVUS_HOST
+    - MILVUS_PORT
+    - MILVUS_TOKEN
+    - NEXT_PUBLIC_API_URL
+    - NEXT_PUBLIC_USER_ID
+    - OLLAMA_BASE_URL
+    - OLLAMA_HOST
+    - OPENAI_API_KEY
+    - OPENSEARCH_HOST
+    - OPENSEARCH_PASSWORD
+    - OPENSEARCH_PORT
+    - OPENSEARCH_USER
+    - OPENSEARCH_USE_SSL
+    - OPENSEARCH_VERIFY_CERTS
+    - PG_DB
+    - PG_HOST
+    - PG_PASSWORD
+    - PG_PORT
+    - PG_USER
+    - QDRANT_API_KEY
+    - QDRANT_HOST
+    - QDRANT_PORT
+    - QDRANT_URL
+    - QDRANT__TELEMETRY_DISABLED
+    - REDIS_URL
+    - USER
+    - WEAVIATE_CLUSTER_URL
+    - WEAVIATE_HOST
+    - WEAVIATE_PORT
