@@ -74,16 +74,17 @@ See [docs/releases.md](docs/releases.md) for the central release process details
 
 ## Validation
 
-Required local validation is pytest-first:
+Required local validation is split between app-specific tests and `aio-fleet`:
 
 ```bash
 git submodule update --init --recursive
 python3 -m venv .venv-local
 .venv-local/bin/pip install -r requirements-dev.txt
-.venv-local/bin/pytest tests/unit tests/template --junit-xml=reports/pytest-unit.xml -o junit_family=xunit1
+.venv-local/bin/pytest tests/template --junit-xml=reports/pytest-unit.xml -o junit_family=xunit1
 .venv-local/bin/pytest tests/integration -m integration --junit-xml=reports/pytest-integration.xml -o junit_family=xunit1
-./trunk-analytics-cli validate --junit-paths "reports/pytest-unit.xml,reports/pytest-integration.xml"
-trunk check --show-existing --all
+cd ../aio-fleet
+.venv/bin/python -m aio_fleet validate-repo --repo mem0-aio --repo-path ../mem0-aio
+.venv/bin/python -m aio_fleet trunk run --repo mem0-aio --repo-path ../mem0-aio --no-fix
 ```
 
 CI cost model:
