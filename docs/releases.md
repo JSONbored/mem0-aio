@@ -10,7 +10,7 @@
 
 ## Published image tags
 
-Every `main` build publishes:
+Every central `aio-fleet` publish for `main` publishes:
 
 - `latest`
 - the exact pinned upstream version
@@ -18,13 +18,12 @@ Every `main` build publishes:
 
 Release commits also publish the exact immutable release package tag, for example `v2.0.0-aio.1`. Ordinary `main` pushes do not overwrite that release tag.
 
-Publish jobs require Docker Hub credentials and push the same tag set to Docker Hub directly.
+Central publish uses Docker Hub credentials and the shared GHCR token stored in `aio-fleet`.
 
 ## Release flow
 
-1. Trigger **Prepare Release / Mem0-AIO** from `main`.
-2. The workflow computes the next `upstream-aio.N` version, updates `CHANGELOG.md`, syncs the XML `<Changes>` block, and opens a release PR.
+1. From `aio-fleet`, run `python -m aio_fleet release status --repo mem0-aio` to inspect the next release.
+2. Run `python -m aio_fleet release prepare --repo mem0-aio` on a release branch, then open a `chore(release): <version>` PR.
 3. Review and merge that PR into `main`.
-4. Wait for the `CI / Mem0-AIO` run on the release target commit to finish green. That same `main` push also publishes the updated package tags automatically.
-5. Trigger **Publish Release / Mem0-AIO** from `main`.
-6. The workflow verifies CI on the exact release target commit, creates the Git tag if needed, and publishes the GitHub Release.
+4. Run the central `aio-fleet` control check for the release target commit with publish enabled, and require `aio-fleet / required` to pass.
+5. Run `python -m aio_fleet release publish --repo mem0-aio` from `aio-fleet` to create the GitHub Release.
