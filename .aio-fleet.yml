@@ -1,0 +1,32 @@
+schema_version: 1
+repo: mem0-aio
+github_repo: JSONbored/mem0-aio
+app_slug: mem0-aio
+image:
+  name: jsonbored/mem0-aio
+  cache_scope: mem0-aio-image
+  pytest_tag: mem0-aio:pytest
+  publish_platforms: linux/amd64,linux/arm64
+release:
+  name: Mem0-AIO
+  profile: changelog-version
+  previous_tag_command: latest-aio-tag
+upstream:
+  name: Mem0
+  digest_arg: UPSTREAM_IMAGE_DIGEST
+template:
+  xml_paths:
+  - mem0-aio.xml
+  - assets/**
+  generated: false
+catalog:
+  published: true
+  assets:
+  - source: mem0-aio.xml
+    target: mem0-aio.xml
+  - source: assets/mem0.jpeg
+    target: icons/mem0.jpeg
+tests:
+  unit: tests/unit tests/template
+  integration: tests/integration -m integration
+  checkout_submodules: true
