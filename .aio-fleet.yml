@@ -15,6 +15,16 @@ upstream:
   name: Mem0
   version_key: UPSTREAM_VERSION
   digest_arg: UPSTREAM_IMAGE_DIGEST
+  monitor:
+    - component: aio
+      name: Mem0
+      source: github-tags
+      repo: mem0ai/mem0
+      dockerfile: Dockerfile
+      version_key: UPSTREAM_VERSION
+      stable_only: true
+      strategy: notify
+      release_notes_url: https://github.com/mem0ai/mem0/releases
 template:
   xml_paths:
     - mem0-aio.xml
