@@ -79,7 +79,7 @@ Required local validation is split between app-specific tests and `aio-fleet`:
 ```bash
 git submodule update --init --recursive
 python3 -m venv .venv-local
-.venv-local/bin/pip install -r requirements-dev.txt
+.venv-local/bin/pip install -e "../aio-fleet[app-tests]"
 .venv-local/bin/pytest tests/template --junit-xml=reports/pytest-unit.xml -o junit_family=xunit1
 .venv-local/bin/pytest tests/integration -m integration --junit-xml=reports/pytest-integration.xml -o junit_family=xunit1
 cd ../aio-fleet
