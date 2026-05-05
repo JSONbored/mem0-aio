@@ -15,16 +15,23 @@ upstream:
   name: Mem0
   version_key: UPSTREAM_VERSION
   digest_arg: UPSTREAM_IMAGE_DIGEST
+  commit_paths:
+    - .aio-fleet.yml
+    - Dockerfile
+    - openmemory
   monitor:
     - component: aio
       name: Mem0
-      source: github-tags
+      source: github-releases
       repo: mem0ai/mem0
       dockerfile: Dockerfile
       version_key: UPSTREAM_VERSION
       stable_only: true
-      strategy: notify
+      strategy: pr
       release_notes_url: https://github.com/mem0ai/mem0/releases
+      submodule_path: openmemory
+      submodule_remote: origin
+      submodule_ref_template: codex/openmemory-{version}-aio
 template:
   xml_paths:
     - mem0-aio.xml
