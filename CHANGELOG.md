@@ -2,175 +2,191 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v2.0.0-aio.3](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.3) - 2026-04-25
+## v2.0.1-aio.1 - 2026-05-05
+
+### Build
+
+- Harden apt package installs
 
 ### CI
 
-- Optimize pytest gating and Trunk uploads by @JSONbored
-- Preserve changelog history and publish release commits by @JSONbored
-- Capture integration diagnostics on pytest failure by @JSONbored
-- Remove automation flag and align publish flow by @JSONbored
-- Centralize trunk config and gate release tags by @JSONbored
-- Accept squash release titles by @JSONbored
-- Target the release commit on merged PRs by @JSONbored
-- Fetch history for release tag lookup by @JSONbored
-- Consolidate pytest workflow steps by @JSONbored
-
-### Dependency Updates
-
-- Update trunk-io/analytics-uploader action to v2 by @renovate[bot]
-- Update dependency pytest to v9 [security] by @renovate[bot]
-- Update ubuntu docker tag to v26 by @renovate[bot]
-
-### Documentation
-
-- Format changelog by @JSONbored
-
-### Fixes
-
-- Make derived repo validator portable by @JSONbored
-- Use workflow file selector for CI checks by @JSONbored
-- Add authenticated qdrant support by @JSONbored
-- Classify local action changes by @JSONbored
-
-### Other Changes
-
-- Merge branch 'main' into codex/ci-diagnostics-fixes by @JSONbored
-- Merge branch 'main' into codex/release-target-immutability by @JSONbored
-- Harden vector store selection and Unraid template guidance by @JSONbored
-
-### Tests
-
-- Replace smoke tests with pytest by @JSONbored
-- Unify validation under pytest by @JSONbored
-- Use docker volumes for runtime persistence by @JSONbored
-- Require external backend coverage by @JSONbored
-- Clean container-owned backend storage by @JSONbored
-- Cover action and container contracts by @JSONbored
-- Require init fail-fast contract by @JSONbored
-- Cover invalid vector store config by @JSONbored
-
-## [v2.0.0-aio.3](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.3) - 2026-04-24
-
-### CI
-
-- Optimize pytest gating and Trunk uploads by @JSONbored
-- Preserve changelog history and publish release commits by @JSONbored
-- Capture integration diagnostics on pytest failure by @JSONbored
-- Remove automation flag and align publish flow by @JSONbored
-- Centralize trunk config and gate release tags by @JSONbored
-- Accept squash release titles by @JSONbored
-
-### Dependency Updates
-
-- Update trunk-io/analytics-uploader action to v2 by @renovate[bot]
-- Update dependency pytest to v9 [security] by @renovate[bot]
-
-### Fixes
-
-- Make derived repo validator portable by @JSONbored
-- Use workflow file selector for CI checks by @JSONbored
-- Add authenticated qdrant support by @JSONbored
-
-### Other Changes
-
-- Merge branch 'main' into codex/ci-diagnostics-fixes by @JSONbored
-
-### Tests
-
-- Replace smoke tests with pytest by @JSONbored
-- Unify validation under pytest by @JSONbored
-- Use docker volumes for runtime persistence by @JSONbored
-- Require external backend coverage by @JSONbored
-- Clean container-owned backend storage by @JSONbored
-
-## [v2.0.0-aio.2](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.2) - 2026-04-18
-
-### Fixes
-
-- Align healthcheck and template auto defaults by @JSONbored
-- Align provider auto mode and container healthcheck by @JSONbored
-- Point openmemory submodule to maintained fork by @JSONbored
-
-### Other Changes
-
-- Document Ollama and external backend setup by @JSONbored
-
-## [v2.0.0-aio.1](https://github.com/JSONbored/mem0-aio/releases/tag/v2.0.0-aio.1) - 2026-04-17
+- Use shared AIO build workflow
+- Centralize release workflows
+- Repin shared workflow ref
+- Centralize workflow drift checks
+- Repin caller workflows
+- Pin catalog asset manifest
+- Pin shared validation policy
+- Use shared AIO workflows
+- Sync workflow path filters
+- Sync catalog publication state
+- Pin publish helper workflow fix
+- Pin next-wave aio-fleet workflows
+- Pin Docker Hub primary workflow
+- Pin control-plane workflow foundation
 
 ### Documentation
 
-- Update Socialify banner by @JSONbored
+- Document central app test dependencies
 
 ### Features
 
-- Align mem0-aio with OpenMemory v2.0.0 by @JSONbored
+- Expose manual publish targets
 
 ### Fixes
 
-- Make releases manual and gate heavy workflows by @JSONbored
-- Harden publish and changelog range by @JSONbored
-
-## [v1.0.9-aio.1](https://github.com/JSONbored/mem0-aio/releases/tag/v1.0.9-aio.1) - 2026-04-17
-
-### Dependency Updates
-
-- Update non-major infrastructure updates by @renovate[bot]
-- Update node.js to v24 by @renovate[bot]
-- Pin ubuntu docker tag to 186072b by @renovate[bot]
-- Update docker/build-push-action action to v7 by @renovate[bot]
-- Update docker/setup-buildx-action action to v4 by @renovate[bot]
-- Update docker/setup-qemu-action action to v4 by @renovate[bot]
-- Update docker/metadata-action action to v6 by @renovate[bot]
-- Update docker/login-action action to v4 by @renovate[bot]
-
-### Documentation
-
-- Add repository guidance by @JSONbored
-
-### Features
-
-- Initial commit for Mem0 AIO Unraid template with s6-overlay by @JSONbored
-- Complete AIO docker build for mem0 openmemory with all s6 hooks and awesome-unraid xml by @JSONbored
-- Add git-cliff release workflow by @JSONbored
-
-### Fixes
-
-- Tighten changelog spacing by @JSONbored
-- Make releases manual and gate heavy workflows by @JSONbored
-- Harden publish and changelog range by @JSONbored
+- Align mem0 icon sync target
+- Sync shared validation and trunk cleanup
+- Sync release shim path fallback
+- Preserve inherited apt source scheme
 
 ### Maintenance
 
-- Standardize README, add FUNDING.yml, and clean up legacy files by @JSONbored
-- Prepare for clean submodule by @JSONbored
-- Standardize template by @JSONbored
-- Add template sync workflow by @JSONbored
-- Revert to verifiable bot identity for non-repudiation by @JSONbored
+- Sync shared repository boilerplate
+- Move shared automation to aio-fleet
+- Declare aio-fleet ownership
+- Bump mem0 to v2.0.1
+
+### Refactors
+
+- Use shared derived repo validation
+- Use shared release helper shim
+- Remove legacy shared contract tests
+
+### Tests
+
+- Repin workflow expectation
+- Run shared metadata validation
+
+## v2.0.0-aio.3 - 2026-04-25
+
+### CI
+
+- Optimize pytest gating and Trunk uploads
+- Preserve changelog history and publish release commits
+- Capture integration diagnostics on pytest failure
+- Remove automation flag and align publish flow
+- Centralize trunk config and gate release tags
+- Accept squash release titles
+- Target the release commit on merged PRs
+- Fetch history for release tag lookup
+- Consolidate pytest workflow steps
+
+### Dependency Updates
+
+- Update trunk-io/analytics-uploader action to v2
+- Update dependency pytest to v9 [security]
+- Update ubuntu docker tag to v26
+
+### Documentation
+
+- Format changelog
+
+### Fixes
+
+- Make derived repo validator portable
+- Use workflow file selector for CI checks
+- Add authenticated qdrant support
+- Classify local action changes
 
 ### Other Changes
 
-- Force rebuild to publish docker image by @JSONbored
-- Security & CI: Fix node24 deprecation and package write permissions by @JSONbored
-- Link Mem0 as recursive submodule and update CI to include submodules in build by @JSONbored
-- Adjust Dockerfile COPY paths to match actual OpenMemory submodule structure by @JSONbored
-- Harden mem0-aio and add smoke testing by @JSONbored
-- Harden mem0-aio workflows and upstream tracking by @JSONbored
-- Add Codex repo memory notes by @JSONbored
-- Add renovate.json by @renovate[bot]
-- Merge branch 'main' into codex/harden-mem0-aio by @JSONbored
-- Reduce smoke-test CI usage by @JSONbored
-- Standardize funding and security docs by @JSONbored
-- Add standard community templates by @JSONbored
-- Consolidate CI workflows by @JSONbored
-- Consolidate CI workflows by @JSONbored
-- Merge main into consolidate-ci-workflows by @JSONbored
-- Merge remote-tracking branch 'origin/main' into codex/reduce-smoke-ci by @JSONbored
-- Fix awesome-unraid sync for protected main by @JSONbored
-- Standardize upstream-aligned image tags by @JSONbored
+- Merge branch 'main' into codex/ci-diagnostics-fixes
+- Merge branch 'main' into codex/release-target-immutability
+- Harden vector store selection and Unraid template guidance
 
-### New Contributors
+### Tests
 
-- @JSONbored made their first contribution in [#21](https://github.com/JSONbored/mem0-aio/pull/21)
-- @renovate[bot] made their first contribution
+- Replace smoke tests with pytest
+- Unify validation under pytest
+- Use docker volumes for runtime persistence
+- Require external backend coverage
+- Clean container-owned backend storage
+- Cover action and container contracts
+- Require init fail-fast contract
+- Cover invalid vector store config
+
+## v2.0.0-aio.2 - 2026-04-18
+
+### Fixes
+
+- Align healthcheck and template auto defaults
+- Align provider auto mode and container healthcheck
+- Point openmemory submodule to maintained fork
+
+### Other Changes
+
+- Document Ollama and external backend setup
+
+## v2.0.0-aio.1 - 2026-04-17
+
+### Documentation
+
+- Update Socialify banner
+
+### Features
+
+- Align mem0-aio with OpenMemory v2.0.0
+
+### Fixes
+
+- Make releases manual and gate heavy workflows
+- Harden publish and changelog range
+
+## v1.0.9-aio.1 - 2026-03-31
+
+### Dependency Updates
+
+- Update non-major infrastructure updates
+- Update node.js to v24
+- Pin ubuntu docker tag to 186072b
+- Update docker/build-push-action action to v7
+- Update docker/setup-buildx-action action to v4
+- Update docker/setup-qemu-action action to v4
+- Update docker/metadata-action action to v6
+- Update docker/login-action action to v4
+
+### Documentation
+
+- Add repository guidance
+
+### Features
+
+- Initial commit for Mem0 AIO Unraid template with s6-overlay
+- Complete AIO docker build for mem0 openmemory with all s6 hooks and awesome-unraid xml
+- Add git-cliff release workflow
+
+### Fixes
+
+- Tighten changelog spacing
+
+### Maintenance
+
+- Standardize README, add FUNDING.yml, and clean up legacy files
+- Prepare for clean submodule
+- Standardize template
+- Add template sync workflow
+- Revert to verifiable bot identity for non-repudiation
+
+### Other Changes
+
+- Force rebuild to publish docker image
+- Security & CI: Fix node24 deprecation and package write permissions
+- Link Mem0 as recursive submodule and update CI to include submodules in build
+- Adjust Dockerfile COPY paths to match actual OpenMemory submodule structure
+- Harden mem0-aio and add smoke testing
+- Harden mem0-aio workflows and upstream tracking
+- Add Codex repo memory notes
+- Add renovate.json
+- Merge branch 'main' into codex/harden-mem0-aio
+- Reduce smoke-test CI usage
+- Standardize funding and security docs
+- Add standard community templates
+- Consolidate CI workflows
+- Consolidate CI workflows
+- Merge main into consolidate-ci-workflows
+- Merge remote-tracking branch 'origin/main' into codex/reduce-smoke-ci
+- Fix awesome-unraid sync for protected main
+- Standardize upstream-aligned image tags
+
 <!-- generated by git-cliff -->
