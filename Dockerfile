@@ -33,7 +33,9 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i 's|http://|https://|g' {} + && \
+    printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' > /etc/apt/apt.conf.d/80-retries && \
+    apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates="$(apt-cache madison ca-certificates | awk 'NR==1 {print $3}')" \
     curl="$(apt-cache madison curl | awk 'NR==1 {print $3}')" \
     xz-utils="$(apt-cache madison xz-utils | awk 'NR==1 {print $3}')" \
