@@ -9,7 +9,7 @@ An Unraid-first, single-container deployment of [Mem0 OpenMemory](https://github
 ## What This Image Includes
 
 - OpenMemory web UI on port `3000`
-- OpenMemory API / MCP server on port `8765`
+- OpenMemory API / MCP server on internal localhost port `8765`
 - Embedded Qdrant vector store
 - Persistent appdata storage for SQLite and Qdrant state
 - Upstream backup/export helper scripts bundled into the image
@@ -53,13 +53,13 @@ The wrapper still defaults to the internal bundled storage path so new Unraid us
 ## Runtime Notes
 
 - As of `2026-04-17`, upstream Mem0 has a newer stable release than the original wrapper baseline; this repo is being moved to the current stable `v2.0.0` line rather than staying on the older `v1.0.x` line.
-- The direct API / MCP port is optional for normal browser use because the UI proxies to the API over the same published web port.
+- The direct API / MCP port is optional for normal browser use because the UI proxies to the API over the same published web port. By default, the API binds to `127.0.0.1` inside the container and is not published by the Unraid template; set `MEM0_API_HOST=0.0.0.0` only when intentionally publishing port `8765` behind your own network or reverse-proxy access controls.
 - The embedded Qdrant service is intentionally bundled because that is the critical first-boot dependency for the AIO path. External vector store support remains optional advanced configuration.
 - For authenticated external Qdrant, prefer `QDRANT_URL=http://qdrant:6333` plus `QDRANT_API_KEY` instead of only `QDRANT_HOST` and `QDRANT_PORT`.
 - Do not set `QDRANT_API_KEY` against the bundled Qdrant default. Use `QDRANT_URL` or an external `QDRANT_HOST` when Qdrant auth is enabled.
 - Native Ollama provider support expects the root Ollama URL such as `http://host.docker.internal:11434`, not an OpenAI-compatible `/v1` path.
 - If your homelab front door adds auth and only exposes an OpenAI-style `/v1` endpoint, use the OpenAI-compatible base URL fields instead of the native Ollama provider path.
-- Elasticsearch/OpenSearch support is now wired for real external deployments, but those stacks usually need explicit auth and SSL choices. For Elasticsearch, the advanced template now exposes `ELASTICSEARCH_USE_SSL` and `ELASTICSEARCH_VERIFY_CERTS`. For OpenSearch, it now also exposes optional user/password plus `OPENSEARCH_USE_SSL` and `OPENSEARCH_VERIFY_CERTS`, with SSL defaulting to `true` to match modern secured nodes.
+- Elasticsearch/OpenSearch support is now wired for real external deployments, but those stacks usually need explicit auth and SSL choices. For Elasticsearch, the advanced template exposes `ELASTICSEARCH_USE_SSL` and `ELASTICSEARCH_VERIFY_CERTS`. For OpenSearch, it exposes optional user/password plus `OPENSEARCH_USE_SSL` and `OPENSEARCH_VERIFY_CERTS`. SSL and certificate verification both default to `true`; set verification to `false` only for a trusted self-signed endpoint on a private network.
 - If you expose OpenMemory beyond your LAN, treat the direct MCP/API surface and your model/provider credentials as real attack surface.
 
 ## Publishing and Releases

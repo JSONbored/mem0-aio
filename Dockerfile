@@ -26,6 +26,10 @@ FROM ubuntu:26.04@sha256:5e275723f82c67e387ba9e3c24baa0abdcb268917f276a0561c97be
 ARG S6_OVERLAY_VERSION=3.2.0.0
 ARG TARGETARCH
 
+COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs
+COPY --from=qdrant-bin /etc/ca-certificates.conf /etc/ca-certificates.conf
+COPY --from=qdrant-bin /usr/share/ca-certificates /usr/share/ca-certificates
+
 # Install system dependencies, python, nodejs
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_NO_CACHE_DIR=1
@@ -33,7 +37,8 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' > /etc/apt/apt.conf.d/80-retries && \
+RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\n' > /etc/apt/apt.conf.d/80-retries && \
+    find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i 's|http://|https://|g' {} + && \
     apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates="$(apt-cache madison ca-certificates | awk 'NR==1 {print $3}')" \
     curl="$(apt-cache madison curl | awk 'NR==1 {print $3}')" \
@@ -118,14 +123,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_API_URL=/openmemory-api
 ENV NEXT_PUBLIC_USER_ID=default_user
 ENV USER=default_user
+ENV MEM0_API_HOST=127.0.0.1
 ENV HOST="0.0.0.0"
 ENV PORT="3000"
 
 # Volumes
 VOLUME ["/mem0/storage"]
 
-# Expose ports: UI (3000), MCP API (8765), Qdrant (6333)
-EXPOSE 3000 8765 6333
+# Expose ports: UI (3000), Qdrant (6333). The MCP/API service binds to localhost by default.
+EXPOSE 3000 6333
 
 ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=300000
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2

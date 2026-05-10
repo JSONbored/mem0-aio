@@ -6,7 +6,7 @@
 
 - The Web UI is the primary published port.
 - The UI talks to the API through `/openmemory-api` by default.
-- Publish `8765` only if you want direct API or MCP access from external clients.
+- Publish `8765` only if you want direct API or MCP access from external clients. The API binds to `127.0.0.1` by default; set `MEM0_API_HOST=0.0.0.0` only when deliberately exposing that port behind your own access controls.
 
 ## Provider Configuration
 
@@ -30,6 +30,7 @@ Useful variables:
 - `EMBEDDER_API_KEY`
 - `EMBEDDER_BASE_URL`
 - `EMBEDDER_DIMENSIONS`
+- `MEM0_API_HOST`
 - `NEXT_PUBLIC_API_URL`
 - `NEXT_PUBLIC_USER_ID`
 
@@ -94,6 +95,8 @@ Minimum external-backend selectors:
 - Elasticsearch: `ELASTICSEARCH_HOST` and `ELASTICSEARCH_PORT`
 - OpenSearch: `OPENSEARCH_HOST` and `OPENSEARCH_PORT`
 - FAISS: `FAISS_PATH`
+
+Keep `ELASTICSEARCH_VERIFY_CERTS=true` and `OPENSEARCH_VERIFY_CERTS=true` for external HTTPS backends. Set either value to `false` only for a trusted self-signed endpoint on a private network.
 
 ## Export Helper
 

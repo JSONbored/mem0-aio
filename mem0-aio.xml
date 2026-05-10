@@ -19,7 +19,7 @@
 2. For the fastest hosted path, set [code]OPENAI_API_KEY[/code].&#xD;
 3. For the normal local-LLM homelab path, set [code]OLLAMA_BASE_URL[/code] to your external Ollama root URL and set the Ollama chat/embed models you actually have pulled.&#xD;
 4. Start the container and open the Web UI. The wrapper will auto-default to Ollama when [code]OLLAMA_BASE_URL[/code] is set and no explicit provider overrides are supplied.&#xD;
-5. Only expose the direct API port if you need external MCP/API clients.&#xD;
+5. Leave the direct API/MCP port unpublished unless you intentionally need external MCP/API clients behind your own access controls.&#xD;
 &#xD;
 [b]Advanced View[/b]&#xD;
 - Leave storage defaults in place for the bundled SQLite + Qdrant path.&#xD;
@@ -84,11 +84,6 @@
         <ContainerPort>3000</ContainerPort>
         <Protocol>tcp</Protocol>
       </Port>
-      <Port>
-        <HostPort>8765</HostPort>
-        <ContainerPort>8765</ContainerPort>
-        <Protocol>tcp</Protocol>
-      </Port>
     </Publish>
   </Networking>
   <Data>
@@ -100,7 +95,7 @@
   </Data>
 
   <Config Name="Web UI Port" Target="3000" Default="3000" Mode="tcp" Description="Main OpenMemory web interface port." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
-  <Config Name="API / MCP Port" Target="8765" Default="8765" Mode="tcp" Description="Direct API and MCP port. The UI works without exposing this externally, but external MCP clients may need it." Type="Port" Display="advanced" Required="false" Mask="false">8765</Config>
+  <Config Name="API / MCP Port" Target="8765" Default="" Mode="tcp" Description="Optional direct API and MCP host port. Leave blank for normal UI-only access. If you publish this port, also set [Security] API Bind Address to 0.0.0.0 and protect access at your network or reverse proxy." Type="Port" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="AppData - OpenMemory Storage" Target="/mem0/storage" Default="/mnt/user/appdata/mem0-aio/storage" Mode="rw" Description="Persistent storage for the SQLite database, embedded Qdrant data, and AIO state." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/mem0-aio/storage</Config>
 
   <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="Optional hosted-provider quick start. Leave blank if you plan to use Ollama instead." Type="Variable" Display="always" Required="false" Mask="true"/>
@@ -109,6 +104,7 @@
   <Config Name="Ollama Chat Model" Target="LLM_MODEL" Default="" Mode="" Description="Optional Ollama chat model override. Set this to a model you already have pulled on your Ollama server. Example: llama3.1:latest or mistral:7b" Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="Ollama Embed Model" Target="EMBEDDER_MODEL" Default="" Mode="" Description="Optional Ollama embedding model override. Set this to a model you already have pulled on your Ollama server. Example: nomic-embed-text" Type="Variable" Display="always" Required="false" Mask="false"/>
 
+  <Config Name="[Security] API Bind Address" Target="MEM0_API_HOST" Default="127.0.0.1" Mode="" Description="Bind address for the internal API/MCP server. Keep 127.0.0.1 for UI-only access; use 0.0.0.0 only when deliberately publishing the API port behind your own access controls." Type="Variable" Display="advanced" Required="false" Mask="false">127.0.0.1</Config>
   <Config Name="[UI] Browser API URL" Target="NEXT_PUBLIC_API_URL" Default="/openmemory-api" Mode="" Description="Default same-origin proxy path for the web UI. Leave this alone unless you intentionally want the browser to call a different API URL directly." Type="Variable" Display="advanced" Required="false" Mask="false">/openmemory-api</Config>
   <Config Name="[UI] Public User ID" Target="NEXT_PUBLIC_USER_ID" Default="default_user" Mode="" Description="Default user ID shown in the browser client. Usually keep this aligned with USER." Type="Variable" Display="advanced" Required="false" Mask="false">default_user</Config>
 
@@ -149,13 +145,13 @@
   <Config Name="[Vector Store:Elasticsearch] User" Target="ELASTICSEARCH_USER" Default="" Mode="" Description="Optional Elasticsearch username." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[Vector Store:Elasticsearch] Password" Target="ELASTICSEARCH_PASSWORD" Default="" Mode="" Description="Optional Elasticsearch password." Type="Variable" Display="advanced" Required="false" Mask="true"/>
   <Config Name="[Vector Store:Elasticsearch] Use SSL" Target="ELASTICSEARCH_USE_SSL" Default="true|false" Mode="" Description="Whether the Elasticsearch HTTP endpoint uses HTTPS. Default is true because modern Elasticsearch containers usually expose HTTPS." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
-  <Config Name="[Vector Store:Elasticsearch] Verify Certs" Target="ELASTICSEARCH_VERIFY_CERTS" Default="true|false" Mode="" Description="Whether to verify Elasticsearch TLS certificates. Default is false because many self-hosted homelab deployments use self-signed certs." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="[Vector Store:Elasticsearch] Verify Certs" Target="ELASTICSEARCH_VERIFY_CERTS" Default="true|false" Mode="" Description="Whether to verify Elasticsearch TLS certificates. Keep true for external HTTPS backends; set false only for a trusted self-signed endpoint on a private network." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="[Vector Store:OpenSearch] Host" Target="OPENSEARCH_HOST" Default="" Mode="" Description="Optional external OpenSearch host." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[Vector Store:OpenSearch] Port" Target="OPENSEARCH_PORT" Default="" Mode="" Description="Optional external OpenSearch port." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[Vector Store:OpenSearch] User" Target="OPENSEARCH_USER" Default="" Mode="" Description="Optional OpenSearch username." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="[Vector Store:OpenSearch] Password" Target="OPENSEARCH_PASSWORD" Default="" Mode="" Description="Optional OpenSearch password." Type="Variable" Display="advanced" Required="false" Mask="true"/>
   <Config Name="[Vector Store:OpenSearch] Use SSL" Target="OPENSEARCH_USE_SSL" Default="true|false" Mode="" Description="Whether the OpenSearch HTTP endpoint uses HTTPS. Default is true because modern OpenSearch containers usually expose HTTPS." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
-  <Config Name="[Vector Store:OpenSearch] Verify Certs" Target="OPENSEARCH_VERIFY_CERTS" Default="true|false" Mode="" Description="Whether to verify OpenSearch TLS certificates. Leave false for self-signed homelab deployments." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="[Vector Store:OpenSearch] Verify Certs" Target="OPENSEARCH_VERIFY_CERTS" Default="true|false" Mode="" Description="Whether to verify OpenSearch TLS certificates. Keep true for external HTTPS backends; set false only for a trusted self-signed endpoint on a private network." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="[Vector Store:FAISS] Path" Target="FAISS_PATH" Default="" Mode="" Description="Optional FAISS storage path inside the container or a mounted host path." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 
   <Config Name="[Backup Export] User ID Filter" Target="EXPORT_USER_ID" Default="" Mode="" Description="Optional one-shot filter for the bundled upstream export helper script. Only set this if you intentionally run the export tooling inside the container." Type="Variable" Display="advanced" Required="false" Mask="false"/>

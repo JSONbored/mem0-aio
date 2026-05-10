@@ -72,6 +72,8 @@ def container(storage_volume: str):
         f"{ui_port}:3000",
         "-p",
         f"{api_port}:8765",
+        "-e",
+        "MEM0_API_HOST=0.0.0.0",
         "-p",
         f"{qdrant_port}:6333",
         "-v",

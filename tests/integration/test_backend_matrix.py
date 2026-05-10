@@ -414,6 +414,8 @@ def backend_runtime(backend: str, image_tag: str):
             f"{ui_port}:3000",
             "-p",
             f"{api_port}:8765",
+            "-e",
+            "MEM0_API_HOST=0.0.0.0",
             "-v",
             f"{storage_path}:/mem0/storage",
             *mem0_env_args(backend, backend_container),
