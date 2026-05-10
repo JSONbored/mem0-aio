@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.0.1-aio.3 - 2026-05-10
+
+### Fixes
+
+- Restrict mem0 apt sources
+
+### Tests
+
+- Declare mem0 security test dependencies
+
 ## v2.0.1-aio.2 - 2026-05-10
 
 ### Fixes

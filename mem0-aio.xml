@@ -33,11 +33,8 @@
 - The embedded Qdrant service is intentionally bundled for the beginner AIO path; it is skipped only when one valid external vector backend is configured.</Overview>
   <Changes>### 2026-05-10&#xD;
 - Generated from CHANGELOG.md during release preparation. Do not edit manually.&#xD;
-- Tighten mem0 runtime defaults&#xD;
-- Satisfy mem0 central trunk policy&#xD;
-- Harden mem0 apt bootstrap retries&#xD;
-- Stabilize mem0 arm64 apt bootstrap&#xD;
-- Preserve signed Ubuntu apt sources</Changes>
+- Restrict mem0 apt sources&#xD;
+- Declare mem0 security test dependencies</Changes>
   <Category>AI: Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>
