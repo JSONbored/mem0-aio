@@ -39,7 +39,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
-RUN printf 'Acquire::Retries "5";\nAcquire::Queue-Mode "access";\nAcquire::http::Timeout "60";\nAcquire::https::Timeout "60";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
+RUN printf 'Acquire::Retries "5";\nAcquire::Queue-Mode "host";\nAcquire::ForceIPv4 "true";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::Pipeline-Depth "0";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
     find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i 's|http://|https://|g' {} + && \
     apt_update_ok=0 && \
     for attempt in 1 2 3 4 5; do \

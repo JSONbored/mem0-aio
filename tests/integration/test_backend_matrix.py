@@ -38,6 +38,14 @@ INVALID_LOG_MARKERS = (
     "You didn't provide an API key",
     "Error categorizing memory",
 )
+PROXY_ENV_VARS = (
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+)
 
 
 def http_request(
@@ -121,6 +129,10 @@ def backend_ready(backend: str, backend_container: str, api_port: int) -> bool:
                     "docker",
                     "exec",
                     backend_container,
+                    "env",
+                    *[f"{name}=" for name in PROXY_ENV_VARS],
+                    "NO_PROXY=*",
+                    "no_proxy=*",
                     "wget",
                     "-qO-",
                     "http://127.0.0.1:8080/v1/.well-known/ready",
@@ -136,6 +148,10 @@ def backend_ready(backend: str, backend_container: str, api_port: int) -> bool:
                     "docker",
                     "exec",
                     backend_container,
+                    "env",
+                    *[f"{name}=" for name in PROXY_ENV_VARS],
+                    "NO_PROXY=*",
+                    "no_proxy=*",
                     "curl",
                     "-fsSk",
                     "-u",
@@ -153,6 +169,10 @@ def backend_ready(backend: str, backend_container: str, api_port: int) -> bool:
                     "docker",
                     "exec",
                     backend_container,
+                    "env",
+                    *[f"{name}=" for name in PROXY_ENV_VARS],
+                    "NO_PROXY=*",
+                    "no_proxy=*",
                     "curl",
                     "-fsSk",
                     "-u",
@@ -295,6 +315,14 @@ def backend_run_command(
 
 
 def mem0_env_args(backend: str, backend_container: str) -> list[str]:
+    proxy_bypass = ",".join(
+        [
+            "127.0.0.1",
+            "localhost",
+            OLLAMA_CONTAINER,
+            backend_container,
+        ]
+    )
     env_args = [
         "-e",
         f"OLLAMA_BASE_URL=http://{OLLAMA_CONTAINER}:11434",
@@ -302,7 +330,13 @@ def mem0_env_args(backend: str, backend_container: str) -> list[str]:
         "LLM_MODEL=tinyllama:latest",
         "-e",
         "EMBEDDER_MODEL=nomic-embed-text:latest",
+        "-e",
+        f"NO_PROXY={proxy_bypass}",
+        "-e",
+        f"no_proxy={proxy_bypass}",
     ]
+    for name in PROXY_ENV_VARS:
+        env_args.extend(["-e", f"{name}="])
     if backend == "faiss":
         env_args.extend(["-e", "FAISS_PATH=/mem0/storage/faiss"])
     elif backend == "qdrant-auth":
