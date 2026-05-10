@@ -31,38 +31,13 @@
 - Actual memory generation still requires a valid LLM/embedder configuration. Leaving [code]OPENAI_API_KEY[/code] blank is fine if you are using Ollama, but you still need to provide a reachable Ollama endpoint and valid model names.&#xD;
 - Native Ollama uses the root API URL such as [code]http://host.docker.internal:11434[/code], not an OpenAI-compatible [code]/v1[/code] path. If your reverse proxy adds auth and only exposes an OpenAI-style [code]/v1[/code] endpoint, use the advanced OpenAI-compatible base URL fields instead of the native Ollama provider path.&#xD;
 - The embedded Qdrant service is intentionally bundled for the beginner AIO path; it is skipped only when one valid external vector backend is configured.</Overview>
-  <Changes>### 2026-05-05&#xD;
+  <Changes>### 2026-05-10&#xD;
 - Generated from CHANGELOG.md during release preparation. Do not edit manually.&#xD;
-- Harden apt package installs&#xD;
-- Use shared AIO build workflow&#xD;
-- Centralize release workflows&#xD;
-- Repin shared workflow ref&#xD;
-- Centralize workflow drift checks&#xD;
-- Repin caller workflows&#xD;
-- Pin catalog asset manifest&#xD;
-- Pin shared validation policy&#xD;
-- Use shared AIO workflows&#xD;
-- Sync workflow path filters&#xD;
-- Sync catalog publication state&#xD;
-- Pin publish helper workflow fix&#xD;
-- Pin next-wave aio-fleet workflows&#xD;
-- Pin Docker Hub primary workflow&#xD;
-- Pin control-plane workflow foundation&#xD;
-- Document central app test dependencies&#xD;
-- Expose manual publish targets&#xD;
-- Align mem0 icon sync target&#xD;
-- Sync shared validation and trunk cleanup&#xD;
-- Sync release shim path fallback&#xD;
-- Preserve inherited apt source scheme&#xD;
-- Sync shared repository boilerplate&#xD;
-- Move shared automation to aio-fleet&#xD;
-- Declare aio-fleet ownership&#xD;
-- Bump mem0 to v2.0.1&#xD;
-- Use shared derived repo validation&#xD;
-- Use shared release helper shim&#xD;
-- Remove legacy shared contract tests&#xD;
-- Repin workflow expectation&#xD;
-- Run shared metadata validation</Changes>
+- Tighten mem0 runtime defaults&#xD;
+- Satisfy mem0 central trunk policy&#xD;
+- Harden mem0 apt bootstrap retries&#xD;
+- Stabilize mem0 arm64 apt bootstrap&#xD;
+- Preserve signed Ubuntu apt sources</Changes>
   <Category>AI: Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>

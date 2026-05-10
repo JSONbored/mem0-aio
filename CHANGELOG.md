@@ -1,15 +1,20 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## v2.0.1-aio.2 - 2026-05-10
+### Fixes
+- Tighten mem0 runtime defaults
+- Satisfy mem0 central trunk policy
+- Harden mem0 apt bootstrap retries
+- Stabilize mem0 arm64 apt bootstrap
+- Preserve signed Ubuntu apt sources
 
 ## v2.0.1-aio.1 - 2026-05-05
-
 ### Build
-
 - Harden apt package installs
 
-### CI
 
+### CI
 - Use shared AIO build workflow
 - Centralize release workflows
 - Repin shared workflow ref
@@ -25,43 +30,41 @@ All notable changes to this project will be documented in this file.
 - Pin Docker Hub primary workflow
 - Pin control-plane workflow foundation
 
-### Documentation
 
+### Documentation
 - Document central app test dependencies
 
-### Features
 
+### Features
 - Expose manual publish targets
 
-### Fixes
 
+### Fixes
 - Align mem0 icon sync target
 - Sync shared validation and trunk cleanup
 - Sync release shim path fallback
 - Preserve inherited apt source scheme
 
-### Maintenance
 
+### Maintenance
 - Sync shared repository boilerplate
 - Move shared automation to aio-fleet
 - Declare aio-fleet ownership
 - Bump mem0 to v2.0.1
 
-### Refactors
 
+### Refactors
 - Use shared derived repo validation
 - Use shared release helper shim
 - Remove legacy shared contract tests
 
-### Tests
 
+### Tests
 - Repin workflow expectation
 - Run shared metadata validation
 
 ## v2.0.0-aio.3 - 2026-04-25
-
 ### CI
-
 - Optimize pytest gating and Trunk uploads
 - Preserve changelog history and publish release commits
 - Capture integration diagnostics on pytest failure
@@ -72,31 +75,31 @@ All notable changes to this project will be documented in this file.
 - Fetch history for release tag lookup
 - Consolidate pytest workflow steps
 
-### Dependency Updates
 
+### Dependency Updates
 - Update trunk-io/analytics-uploader action to v2
 - Update dependency pytest to v9 [security]
 - Update ubuntu docker tag to v26
 
-### Documentation
 
+### Documentation
 - Format changelog
 
-### Fixes
 
+### Fixes
 - Make derived repo validator portable
 - Use workflow file selector for CI checks
 - Add authenticated qdrant support
 - Classify local action changes
 
-### Other Changes
 
+### Other Changes
 - Merge branch 'main' into codex/ci-diagnostics-fixes
 - Merge branch 'main' into codex/release-target-immutability
 - Harden vector store selection and Unraid template guidance
 
-### Tests
 
+### Tests
 - Replace smoke tests with pytest
 - Unify validation under pytest
 - Use docker volumes for runtime persistence
@@ -107,36 +110,30 @@ All notable changes to this project will be documented in this file.
 - Cover invalid vector store config
 
 ## v2.0.0-aio.2 - 2026-04-18
-
 ### Fixes
-
 - Align healthcheck and template auto defaults
 - Align provider auto mode and container healthcheck
 - Point openmemory submodule to maintained fork
 
-### Other Changes
 
+### Other Changes
 - Document Ollama and external backend setup
 
 ## v2.0.0-aio.1 - 2026-04-17
-
 ### Documentation
-
 - Update Socialify banner
 
-### Features
 
+### Features
 - Align mem0-aio with OpenMemory v2.0.0
 
-### Fixes
 
+### Fixes
 - Make releases manual and gate heavy workflows
 - Harden publish and changelog range
 
 ## v1.0.9-aio.1 - 2026-03-31
-
 ### Dependency Updates
-
 - Update non-major infrastructure updates
 - Update node.js to v24
 - Pin ubuntu docker tag to 186072b
@@ -146,30 +143,30 @@ All notable changes to this project will be documented in this file.
 - Update docker/metadata-action action to v6
 - Update docker/login-action action to v4
 
-### Documentation
 
+### Documentation
 - Add repository guidance
 
-### Features
 
+### Features
 - Initial commit for Mem0 AIO Unraid template with s6-overlay
 - Complete AIO docker build for mem0 openmemory with all s6 hooks and awesome-unraid xml
 - Add git-cliff release workflow
 
-### Fixes
 
+### Fixes
 - Tighten changelog spacing
 
-### Maintenance
 
+### Maintenance
 - Standardize README, add FUNDING.yml, and clean up legacy files
 - Prepare for clean submodule
 - Standardize template
 - Add template sync workflow
 - Revert to verifiable bot identity for non-repudiation
 
-### Other Changes
 
+### Other Changes
 - Force rebuild to publish docker image
 - Security & CI: Fix node24 deprecation and package write permissions
 - Link Mem0 as recursive submodule and update CI to include submodules in build
