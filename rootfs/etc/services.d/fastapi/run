@@ -17,4 +17,4 @@ if ! mem0_uses_external_vector_store; then
 fi
 
 cd /app/api
-exec uvicorn main:app --host 0.0.0.0 --port 8765
+exec uvicorn main:app --host "${MEM0_API_HOST:-127.0.0.1}" --port 8765

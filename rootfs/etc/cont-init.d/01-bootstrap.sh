@@ -10,6 +10,7 @@ mkdir -p /mem0/storage
 export USER="${USER:-default_user}"
 export NEXT_PUBLIC_USER_ID="${NEXT_PUBLIC_USER_ID:-${USER}}"
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-/openmemory-api}"
+export MEM0_API_HOST="${MEM0_API_HOST:-127.0.0.1}"
 export DATABASE_URL="${DATABASE_URL:-sqlite:////mem0/storage/openmemory.db}"
 export QDRANT_HOST="${QDRANT_HOST:-127.0.0.1}"
 export QDRANT_PORT="${QDRANT_PORT:-6333}"
@@ -18,12 +19,19 @@ export OPENAI_API_KEY="${OPENAI_API_KEY-}"
 
 mem0_validate_vector_store_config
 
+for provider_var in LLM_PROVIDER EMBEDDER_PROVIDER; do
+	if [[ ${!provider_var-} == "auto" ]]; then
+		unset "${provider_var}"
+	fi
+done
+
 : >/var/run/mem0-aio.env
 
 runtime_env_vars=(
 	USER
 	NEXT_PUBLIC_USER_ID
 	NEXT_PUBLIC_API_URL
+	MEM0_API_HOST
 	DATABASE_URL
 	QDRANT_URL
 	QDRANT_HOST
