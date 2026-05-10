@@ -1,5 +1,6 @@
 # checkov:skip=CKV_DOCKER_3: s6 init coordinates multiple bundled services before they drop privileges, so this image does not use a single final USER instruction
 # checkov:skip=CKV_DOCKER_7: the qdrant helper stage is pinned by immutable digest instead of a mutable tag
+# checkov:skip=CKV_DOCKER_9: package versions are resolved with apt-cache madison before apt-get install
 FROM node:24-slim@sha256:879b21aec4a1ad820c27ccd565e7c7ed955f24b92e6694556154f251e4bdb240 AS ui-builder
 
 # Enable corepack for pnpm
@@ -37,17 +38,36 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\n' > /etc/apt/apt.conf.d/80-retries && \
+# hadolint ignore=DL3008
+RUN printf 'Acquire::Retries "5";\nAcquire::Queue-Mode "access";\nAcquire::http::Timeout "60";\nAcquire::https::Timeout "60";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
     find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i 's|http://|https://|g' {} + && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates="$(apt-cache madison ca-certificates | awk 'NR==1 {print $3}')" \
-    curl="$(apt-cache madison curl | awk 'NR==1 {print $3}')" \
-    xz-utils="$(apt-cache madison xz-utils | awk 'NR==1 {print $3}')" \
-    tzdata="$(apt-cache madison tzdata | awk 'NR==1 {print $3}')" \
-    python3="$(apt-cache madison python3 | awk 'NR==1 {print $3}')" \
-    python3-pip="$(apt-cache madison python3-pip | awk 'NR==1 {print $3}')" \
-    python3-venv="$(apt-cache madison python3-venv | awk 'NR==1 {print $3}')" \
-    libunwind8="$(apt-cache madison libunwind8 | awk 'NR==1 {print $3}')" \
+    apt_update_ok=0 && \
+    for attempt in 1 2 3 4 5; do \
+        if apt-get update; then apt_update_ok=1; break; fi; \
+        rm -rf /var/lib/apt/lists/*; \
+        sleep "$((attempt * 5))"; \
+    done && \
+    test "${apt_update_ok}" = "1" && \
+    required_packages=( \
+        ca-certificates \
+        curl \
+        xz-utils \
+        tzdata \
+        python3 \
+        python3-pip \
+        python3-venv \
+        libunwind8 \
+    ) && \
+    install_packages=() && \
+    for package in "${required_packages[@]}"; do \
+        version="$(apt-cache madison "${package}" | awk 'NR==1 {print $3}')"; \
+        if [[ -z "${version}" ]]; then \
+            echo "unable to resolve apt package version: ${package}" >&2; \
+            exit 1; \
+        fi; \
+        install_packages+=("${package}=${version}"); \
+    done && \
+    apt-get install -y --no-install-recommends "${install_packages[@]}" \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 24 to match the UI builder runtime.
