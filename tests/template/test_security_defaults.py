@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 
 from tests.conftest import REPO_ROOT
 
@@ -50,7 +50,9 @@ def test_fastapi_binds_to_container_localhost_by_default() -> None:
 def test_provider_auto_sentinel_is_unset_before_runtime_env_persistence() -> None:
     bootstrap = (REPO_ROOT / "rootfs/etc/cont-init.d/01-bootstrap.sh").read_text()
 
-    assert "for provider_var in LLM_PROVIDER EMBEDDER_PROVIDER" in bootstrap  # nosec B101
+    assert (  # nosec B101
+        "for provider_var in LLM_PROVIDER EMBEDDER_PROVIDER" in bootstrap
+    )
     assert '[[ ${!provider_var-} == "auto" ]]' in bootstrap  # nosec B101
     assert 'unset "${provider_var}"' in bootstrap  # nosec B101
 
@@ -58,22 +60,26 @@ def test_provider_auto_sentinel_is_unset_before_runtime_env_persistence() -> Non
 def test_external_search_backends_verify_tls_by_default() -> None:
     configs = _template_configs()
 
-    assert configs["[Vector Store:Elasticsearch] Verify Certs"].text == "true"  # nosec B101
-    assert configs["[Vector Store:OpenSearch] Verify Certs"].text == "true"  # nosec B101
+    assert (  # nosec B101
+        configs["[Vector Store:Elasticsearch] Verify Certs"].text == "true"
+    )
+    assert (  # nosec B101
+        configs["[Vector Store:OpenSearch] Verify Certs"].text == "true"
+    )
 
 
 def test_dockerfile_rewrites_apt_sources_to_https_before_update() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text()
 
-    ca_index = dockerfile.index(
-        "COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs"
-    )
+    ca_index = dockerfile.index("COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs")
     rewrite_index = dockerfile.index("sed -i 's|http://|https://|g'")
     update_index = dockerfile.index("apt-get update")
 
     assert ca_index < rewrite_index  # nosec B101
     assert rewrite_index < update_index  # nosec B101
-    assert 'Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt"' in dockerfile  # nosec B101
+    assert (  # nosec B101
+        'Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt"' in dockerfile
+    )
 
 
 def test_openmemory_submodule_uses_official_upstream() -> None:
