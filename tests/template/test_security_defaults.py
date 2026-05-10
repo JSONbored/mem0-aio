@@ -74,12 +74,19 @@ def test_dockerfile_rewrites_apt_sources_to_https_before_update() -> None:
     ca_index = dockerfile.index("COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs")
     rewrite_index = dockerfile.index("sed -i 's|http://|https://|g'")
     update_index = dockerfile.index("apt-get update")
+    install_index = dockerfile.index("apt-get install -y --no-install-recommends")
 
     assert ca_index < rewrite_index  # nosec B101
     assert rewrite_index < update_index  # nosec B101
+    assert update_index < install_index  # nosec B101
     assert (  # nosec B101
         'Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt"' in dockerfile
     )
+    assert 'APT::Update::Error-Mode "any"' in dockerfile  # nosec B101
+    assert 'Acquire::Queue-Mode "access"' in dockerfile  # nosec B101
+    assert "apt_update_ok=0" in dockerfile  # nosec B101
+    assert 'test "${apt_update_ok}" = "1"' in dockerfile  # nosec B101
+    assert "unable to resolve apt package version" in dockerfile  # nosec B101
 
 
 def test_openmemory_submodule_uses_official_upstream() -> None:
