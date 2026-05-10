@@ -39,10 +39,13 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Keep Ubuntu's signed archive URIs intact. Ports images use HTTP by default,
-# and APT verifies signed InRelease metadata before installing packages.
+# and APT verifies signed, fresh InRelease metadata before installing packages.
 # hadolint ignore=DL3008
-RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIPv4 "true";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::Pipeline-Depth "0";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
+RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIPv4 "true";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::Pipeline-Depth "0";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAcquire::Check-Valid-Until "true";\nAcquire::AllowInsecureRepositories "false";\nAcquire::AllowDowngradeToInsecureRepositories "false";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
     grep -Rqs '^Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' /etc/apt && \
+    if grep -RqsE '(^|[[:space:]])(Trusted:[[:space:]]*yes|Allow-Insecure:[[:space:]]*yes|Allow-Downgrade-To-Insecure:[[:space:]]*yes|trusted=yes|allow-insecure=yes|allow-downgrade-to-insecure=yes)([[:space:]]|$)' /etc/apt; then \
+        echo "insecure apt source option is not allowed" >&2; exit 1; \
+    fi && \
     apt_source_uris="$( \
         find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec awk ' \
             $1 == "URIs:" { for (i = 2; i <= NF; i++) print $i } \
@@ -55,8 +58,8 @@ RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIP
     )" && \
     for uri in ${apt_source_uris}; do \
         case "${uri}" in \
-            https://*|http://archive.ubuntu.com/ubuntu/|http://security.ubuntu.com/ubuntu/|http://ports.ubuntu.com/ubuntu-ports/) ;; \
-            *) echo "unsupported plaintext apt source: ${uri}" >&2; exit 1 ;; \
+            http://archive.ubuntu.com/ubuntu/|http://security.ubuntu.com/ubuntu/|http://ports.ubuntu.com/ubuntu-ports/|https://archive.ubuntu.com/ubuntu/|https://security.ubuntu.com/ubuntu/|https://ports.ubuntu.com/ubuntu-ports/) ;; \
+            *) echo "unsupported apt source: ${uri}" >&2; exit 1 ;; \
         esac; \
     done && \
     apt_update_ok=0 && \
