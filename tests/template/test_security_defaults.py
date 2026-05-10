@@ -68,11 +68,11 @@ def test_external_search_backends_verify_tls_by_default() -> None:
     )
 
 
-def test_dockerfile_preserves_signed_ubuntu_apt_sources() -> None:
+def test_dockerfile_restricts_apt_sources_without_forcing_https() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text()
 
     ca_index = dockerfile.index("COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs")
-    source_guard_index = dockerfile.index("unsupported plaintext apt source")
+    source_guard_index = dockerfile.index("unsupported apt source")
     update_index = dockerfile.index("apt-get update")
     install_index = dockerfile.index("apt-get install -y --no-install-recommends")
 
@@ -91,11 +91,21 @@ def test_dockerfile_preserves_signed_ubuntu_apt_sources() -> None:
     assert 'Acquire::https::Timeout "20"' in dockerfile  # nosec B101
     assert 'Acquire::https::Verify-Peer "true"' in dockerfile  # nosec B101
     assert 'Acquire::https::Verify-Host "true"' in dockerfile  # nosec B101
+    assert 'Acquire::Check-Valid-Until "true"' in dockerfile  # nosec B101
+    assert 'Acquire::AllowInsecureRepositories "false"' in dockerfile  # nosec B101
+    assert (  # nosec B101
+        'Acquire::AllowDowngradeToInsecureRepositories "false"' in dockerfile
+    )
     assert 'APT::Update::Error-Mode "any"' in dockerfile  # nosec B101
     assert "ubuntu-archive-keyring.gpg" in dockerfile  # nosec B101
+    assert "insecure apt source option is not allowed" in dockerfile  # nosec B101
     assert "http://archive.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
     assert "http://security.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
     assert "http://ports.ubuntu.com/ubuntu-ports/" in dockerfile  # nosec B101
+    assert "https://archive.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
+    assert "https://security.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
+    assert "https://ports.ubuntu.com/ubuntu-ports/" in dockerfile  # nosec B101
+    assert "https://*|" not in dockerfile  # nosec B101
     assert "sed -i 's|http://|https://|g'" not in dockerfile  # nosec B101
     assert "apt_update_ok=0" in dockerfile  # nosec B101
     assert 'test "${apt_update_ok}" = "1"' in dockerfile  # nosec B101
