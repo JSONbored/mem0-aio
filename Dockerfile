@@ -38,14 +38,32 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# Keep Ubuntu's signed archive URIs intact. Ports images use HTTP by default,
+# and APT verifies signed InRelease metadata before installing packages.
 # hadolint ignore=DL3008
-RUN printf 'Acquire::Retries "5";\nAcquire::Queue-Mode "host";\nAcquire::ForceIPv4 "true";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::Pipeline-Depth "0";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
-    find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i 's|http://|https://|g' {} + && \
+RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIPv4 "true";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::Pipeline-Depth "0";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
+    grep -Rqs '^Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' /etc/apt && \
+    apt_source_uris="$( \
+        find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec awk ' \
+            $1 == "URIs:" { for (i = 2; i <= NF; i++) print $i } \
+            $1 == "deb" || $1 == "deb-src" { \
+                for (i = 2; i <= NF; i++) { \
+                    if ($i ~ /^https?:\/\//) { print $i; break } \
+                } \
+            } \
+        ' {} + \
+    )" && \
+    for uri in ${apt_source_uris}; do \
+        case "${uri}" in \
+            https://*|http://archive.ubuntu.com/ubuntu/|http://security.ubuntu.com/ubuntu/|http://ports.ubuntu.com/ubuntu-ports/) ;; \
+            *) echo "unsupported plaintext apt source: ${uri}" >&2; exit 1 ;; \
+        esac; \
+    done && \
     apt_update_ok=0 && \
-    for attempt in 1 2 3 4 5; do \
+    for attempt in 1 2 3; do \
         if apt-get update; then apt_update_ok=1; break; fi; \
         rm -rf /var/lib/apt/lists/*; \
-        sleep "$((attempt * 5))"; \
+        sleep "$((attempt * 3))"; \
     done && \
     test "${apt_update_ok}" = "1" && \
     required_packages=( \
