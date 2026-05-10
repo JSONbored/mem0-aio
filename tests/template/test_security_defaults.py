@@ -82,11 +82,35 @@ def test_dockerfile_rewrites_apt_sources_to_https_before_update() -> None:
     assert (  # nosec B101
         'Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt"' in dockerfile
     )
+    assert 'Acquire::Queue-Mode "host"' in dockerfile  # nosec B101
+    assert 'Acquire::ForceIPv4 "true"' in dockerfile  # nosec B101
+    assert 'Acquire::https::Pipeline-Depth "0"' in dockerfile  # nosec B101
+    assert 'Acquire::https::Verify-Peer "true"' in dockerfile  # nosec B101
+    assert 'Acquire::https::Verify-Host "true"' in dockerfile  # nosec B101
     assert 'APT::Update::Error-Mode "any"' in dockerfile  # nosec B101
-    assert 'Acquire::Queue-Mode "access"' in dockerfile  # nosec B101
     assert "apt_update_ok=0" in dockerfile  # nosec B101
     assert 'test "${apt_update_ok}" = "1"' in dockerfile  # nosec B101
     assert "unable to resolve apt package version" in dockerfile  # nosec B101
+
+
+def test_backend_matrix_bypasses_host_proxy_for_internal_services() -> None:
+    from tests.integration.test_backend_matrix import mem0_env_args
+
+    backend_matrix = (
+        REPO_ROOT / "tests/integration/test_backend_matrix.py"
+    ).read_text()
+    env_args = mem0_env_args("redis", "mem0-backend-redis-test")
+    expected = "127.0.0.1,localhost,mem0-aio-ollama-mock,mem0-backend-redis-test"
+
+    assert f"NO_PROXY={expected}" in env_args  # nosec B101
+    assert f"no_proxy={expected}" in env_args  # nosec B101
+    assert "HTTP_PROXY=" in env_args  # nosec B101
+    assert "HTTPS_PROXY=" in env_args  # nosec B101
+    assert "ALL_PROXY=" in env_args  # nosec B101
+    assert '"NO_PROXY=*"' in backend_matrix  # nosec B101
+    assert '"no_proxy=*"' in backend_matrix  # nosec B101
+    assert "PROXY_ENV_VARS" in backend_matrix  # nosec B101
+    assert 'f"{name}="' in backend_matrix  # nosec B101
 
 
 def test_openmemory_submodule_uses_official_upstream() -> None:
