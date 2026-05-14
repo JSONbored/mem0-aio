@@ -31,6 +31,7 @@ upstream:
       release_notes_url: https://github.com/mem0ai/mem0/releases
       submodule_path: openmemory
       submodule_remote: origin
+      submodule_ref_template: codex/openmemory-{version}-aio
 template:
   xml_paths:
     - mem0-aio.xml
@@ -76,7 +77,6 @@ validation:
     - LLM_BASE_URL
     - LLM_MODEL
     - LLM_PROVIDER
-    - MEM0_API_HOST
     - MILVUS_DB_NAME
     - MILVUS_HOST
     - MILVUS_PORT
