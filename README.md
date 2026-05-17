@@ -34,6 +34,17 @@ When `OLLAMA_BASE_URL` is set and you do not explicitly override `LLM_PROVIDER` 
 
 For normal Ollama installs, the wrapper now also auto-detects the embedding dimension it needs for Qdrant. If you use a custom embedder and auto-detection cannot determine the size, set `EMBEDDER_DIMENSIONS` explicitly in Advanced View.
 
+## Direct API / MCP Clients
+
+The web UI works without publishing the direct OpenMemory API / MCP port because the UI proxies API traffic through the same published web port. Direct MCP clients, agents, or tools that connect to port `8765` need two Advanced View settings:
+
+1. Set `API / MCP Port` to the host port you want to publish, usually `8765`.
+2. Set `[Security] API Bind Address (MEM0_API_HOST)` to `0.0.0.0`.
+
+The default `MEM0_API_HOST=127.0.0.1` is intentional. It keeps the direct API / MCP service reachable only inside the container for normal UI-only installs, which avoids exposing an unauthenticated memory API and model/provider configuration surface by accident.
+
+If the container is healthy but external MCP clients cannot connect, check both the host port mapping and `MEM0_API_HOST` first. Leave `MEM0_API_HOST` on `127.0.0.1` unless you deliberately publish port `8765` behind your own LAN, firewall, VPN, or reverse-proxy controls.
+
 ## Power User Surface
 
 This repo is deliberately not a stripped-down wrapper. The template now tracks the practical OpenMemory self-hosted environment surface exposed by upstream source and docs, plus AIO defaults for the bundled SQLite + Qdrant path. In Advanced View you can:
