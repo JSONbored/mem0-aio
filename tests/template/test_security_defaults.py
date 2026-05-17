@@ -132,10 +132,11 @@ def test_backend_matrix_bypasses_host_proxy_for_internal_services() -> None:
     assert 'f"{name}="' in backend_matrix  # nosec B101
 
 
-def test_openmemory_submodule_uses_official_upstream() -> None:
+def test_openmemory_submodule_uses_aio_patch_fork() -> None:
     gitmodules = (REPO_ROOT / ".gitmodules").read_text()
     app_manifest = (REPO_ROOT / ".aio-fleet.yml").read_text()
 
-    assert "url = https://github.com/mem0ai/mem0" in gitmodules  # nosec B101
-    assert "url = https://github.com/JSONbored/mem0" not in gitmodules  # nosec B101
-    assert "submodule_ref_template" not in app_manifest  # nosec B101
+    assert "url = https://github.com/JSONbored/mem0" in gitmodules  # nosec B101
+    assert (  # nosec B101
+        "submodule_ref_template: codex/openmemory-{version}-aio" in app_manifest
+    )

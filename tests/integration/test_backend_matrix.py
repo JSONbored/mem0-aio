@@ -81,10 +81,11 @@ def wait_http(url: str, *, timeout: int = 180) -> None:
 
 
 def ollama_container_available() -> bool:
-    return (
-        run_command(["docker", "inspect", OLLAMA_CONTAINER], check=False).returncode
-        == 0
+    result = run_command(
+        ["docker", "inspect", "-f", "{{.State.Running}}", OLLAMA_CONTAINER],
+        check=False,
     )
+    return result.returncode == 0 and result.stdout.strip().lower() == "true"
 
 
 def backend_ready(backend: str, backend_container: str, api_port: int) -> bool:
@@ -480,6 +481,7 @@ def backend_runtime(backend: str, image_tag: str):
 def ollama_service() -> None:
     started_mock = False
     if not ollama_container_available():
+        run_command(["docker", "rm", "-f", OLLAMA_CONTAINER], check=False)
         start_mock_ollama_container(OLLAMA_CONTAINER)
         started_mock = True
     try:
