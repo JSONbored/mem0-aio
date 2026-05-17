@@ -19,7 +19,7 @@
 2. For the fastest hosted path, set [code]OPENAI_API_KEY[/code].&#xD;
 3. For the normal local-LLM homelab path, set [code]OLLAMA_BASE_URL[/code] to your external Ollama root URL and set the Ollama chat/embed models you actually have pulled.&#xD;
 4. Start the container and open the Web UI. The wrapper will auto-default to Ollama when [code]OLLAMA_BASE_URL[/code] is set and no explicit provider overrides are supplied.&#xD;
-5. Leave the direct API/MCP port unpublished unless you intentionally need external MCP/API clients behind your own access controls.&#xD;
+5. Leave the direct API/MCP port unpublished unless you intentionally need external MCP/API clients behind your own access controls. If you publish it, set [code]MEM0_API_HOST=0.0.0.0[/code] and protect that endpoint yourself.&#xD;
 &#xD;
 [b]Advanced View[/b]&#xD;
 - Leave storage defaults in place for the bundled SQLite + Qdrant path.&#xD;
@@ -66,7 +66,7 @@
   </Data>
 
   <Config Name="Web UI Port" Target="3000" Default="3000" Mode="tcp" Description="Main OpenMemory web interface port." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
-  <Config Name="API / MCP Port" Target="8765" Default="" Mode="tcp" Description="Optional direct API and MCP host port. Leave blank for normal UI-only access. If you publish this port, also set [Security] API Bind Address to 0.0.0.0 and protect access at your network or reverse proxy." Type="Port" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="API / MCP Port" Target="8765" Default="" Mode="tcp" Description="Optional direct API and MCP host port. Leave blank for normal UI-only access. If you publish this port, also set [Security] API Bind Address (MEM0_API_HOST) to 0.0.0.0 and protect access at your network or reverse proxy." Type="Port" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="AppData - OpenMemory Storage" Target="/mem0/storage" Default="/mnt/user/appdata/mem0-aio/storage" Mode="rw" Description="Persistent storage for the SQLite database, embedded Qdrant data, and AIO state." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/mem0-aio/storage</Config>
 
   <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="Optional hosted-provider quick start. Leave blank if you plan to use Ollama instead." Type="Variable" Display="always" Required="false" Mask="true"/>
@@ -75,7 +75,7 @@
   <Config Name="Ollama Chat Model" Target="LLM_MODEL" Default="" Mode="" Description="Optional Ollama chat model override. Set this to a model you already have pulled on your Ollama server. Example: llama3.1:latest or mistral:7b" Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="Ollama Embed Model" Target="EMBEDDER_MODEL" Default="" Mode="" Description="Optional Ollama embedding model override. Set this to a model you already have pulled on your Ollama server. Example: nomic-embed-text" Type="Variable" Display="always" Required="false" Mask="false"/>
 
-  <Config Name="[Security] API Bind Address" Target="MEM0_API_HOST" Default="127.0.0.1" Mode="" Description="Bind address for the internal API/MCP server. Keep 127.0.0.1 for UI-only access; use 0.0.0.0 only when deliberately publishing the API port behind your own access controls." Type="Variable" Display="advanced" Required="false" Mask="false">127.0.0.1</Config>
+  <Config Name="[Security] API Bind Address (MEM0_API_HOST)" Target="MEM0_API_HOST" Default="127.0.0.1" Mode="" Description="Bind address for the internal API/MCP server. Keep 127.0.0.1 for UI-only access; use 0.0.0.0 only when deliberately publishing the API/MCP port behind your own LAN, VPN, firewall, or reverse-proxy controls." Type="Variable" Display="advanced" Required="false" Mask="false">127.0.0.1</Config>
   <Config Name="[UI] Browser API URL" Target="NEXT_PUBLIC_API_URL" Default="/openmemory-api" Mode="" Description="Default same-origin proxy path for the web UI. Leave this alone unless you intentionally want the browser to call a different API URL directly." Type="Variable" Display="advanced" Required="false" Mask="false">/openmemory-api</Config>
   <Config Name="[UI] Public User ID" Target="NEXT_PUBLIC_USER_ID" Default="default_user" Mode="" Description="Default user ID shown in the browser client. Usually keep this aligned with USER." Type="Variable" Display="advanced" Required="false" Mask="false">default_user</Config>
 

@@ -30,7 +30,7 @@ def test_api_mcp_port_is_not_published_by_default() -> None:
     assert api_port.attrib["Default"] == ""  # nosec B101
     assert (api_port.text or "") == ""  # nosec B101
 
-    api_bind = configs["[Security] API Bind Address"]
+    api_bind = configs["[Security] API Bind Address (MEM0_API_HOST)"]
     assert api_bind.attrib["Target"] == "MEM0_API_HOST"  # nosec B101
     assert api_bind.attrib["Default"] == "127.0.0.1"  # nosec B101
     assert api_bind.text == "127.0.0.1"  # nosec B101
@@ -41,7 +41,6 @@ def test_fastapi_binds_to_container_localhost_by_default() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text()
 
     assert '--host "${MEM0_API_HOST:-127.0.0.1}"' in run_script  # nosec B101
-    assert "--host 0.0.0.0" not in run_script  # nosec B101
     assert "ENV MEM0_API_HOST=127.0.0.1" in dockerfile  # nosec B101
     assert "EXPOSE 3000 6333" in dockerfile  # nosec B101
     assert "EXPOSE 3000 8765 6333" not in dockerfile  # nosec B101

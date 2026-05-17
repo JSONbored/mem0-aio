@@ -7,6 +7,7 @@
 - The Web UI is the primary published port.
 - The UI talks to the API through `/openmemory-api` by default.
 - Publish `8765` only if you want direct API or MCP access from external clients. The API binds to `127.0.0.1` by default; set `MEM0_API_HOST=0.0.0.0` only when deliberately exposing that port behind your own access controls.
+- In the Unraid template, this is the `[Security] API Bind Address (MEM0_API_HOST)` field. If external agents cannot reach the API/MCP endpoint even though the container is healthy, confirm both the `API / MCP Port` mapping and this bind-address value.
 
 ## Provider Configuration
 
