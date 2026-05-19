@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import subprocess  # nosec B404
+from pathlib import Path
+
 from defusedxml import ElementTree as ET
 
 from tests.conftest import REPO_ROOT
@@ -67,14 +70,19 @@ def test_external_search_backends_verify_tls_by_default() -> None:
     )
 
 
-def test_dockerfile_restricts_apt_sources_without_forcing_https() -> None:
+def test_dockerfile_normalizes_apt_sources_before_update() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text()
+    normalizer = (REPO_ROOT / "docker/normalize-apt-sources.sh").read_text()
 
     ca_index = dockerfile.index("COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs")
-    source_guard_index = dockerfile.index("unsupported apt source")
+    source_guard_index = dockerfile.index("/usr/local/bin/normalize-apt-sources")
     update_index = dockerfile.index("apt-get update")
     install_index = dockerfile.index("apt-get install -y --no-install-recommends")
 
+    assert "FROM ubuntu:26.04@" in dockerfile  # nosec B101
+    assert " AS runtime-base" in dockerfile  # nosec B101
+    assert "FROM runtime-base AS runtime" in dockerfile  # nosec B101
+    assert "COPY docker/normalize-apt-sources.sh" in dockerfile  # nosec B101
     assert ca_index < source_guard_index  # nosec B101
     assert source_guard_index < update_index  # nosec B101
     assert update_index < install_index  # nosec B101
@@ -97,18 +105,98 @@ def test_dockerfile_restricts_apt_sources_without_forcing_https() -> None:
     )
     assert 'APT::Update::Error-Mode "any"' in dockerfile  # nosec B101
     assert "ubuntu-archive-keyring.gpg" in dockerfile  # nosec B101
-    assert "insecure apt source option is not allowed" in dockerfile  # nosec B101
-    assert "http://archive.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
-    assert "http://security.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
-    assert "http://ports.ubuntu.com/ubuntu-ports/" in dockerfile  # nosec B101
-    assert "https://archive.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
-    assert "https://security.ubuntu.com/ubuntu/" in dockerfile  # nosec B101
-    assert "https://ports.ubuntu.com/ubuntu-ports/" in dockerfile  # nosec B101
-    assert "https://*|" not in dockerfile  # nosec B101
+    assert "http://archive.ubuntu.com/ubuntu/|" not in dockerfile  # nosec B101
+    assert "http://security.ubuntu.com/ubuntu/|" not in dockerfile  # nosec B101
+    assert "http://ports.ubuntu.com/ubuntu-ports/|" not in dockerfile  # nosec B101
     assert "sed -i 's|http://|https://|g'" not in dockerfile  # nosec B101
     assert "apt_update_ok=0" in dockerfile  # nosec B101
     assert 'test "${apt_update_ok}" = "1"' in dockerfile  # nosec B101
     assert "unable to resolve apt package version" in dockerfile  # nosec B101
+    assert "insecure apt source option is not allowed" in normalizer  # nosec B101
+    assert "plaintext apt source remained" in normalizer  # nosec B101
+    assert "http://archive\\.ubuntu\\.com/ubuntu/" in normalizer  # nosec B101
+    assert "http://security\\.ubuntu\\.com/ubuntu/" in normalizer  # nosec B101
+    assert "http://ports\\.ubuntu\\.com/ubuntu-ports/" in normalizer  # nosec B101
+    assert "https://archive.ubuntu.com/ubuntu/" in normalizer  # nosec B101
+    assert "https://security.ubuntu.com/ubuntu/" in normalizer  # nosec B101
+    assert "https://ports.ubuntu.com/ubuntu-ports/" in normalizer  # nosec B101
+
+
+def _apt_source_root(tmp_path: Path) -> Path:
+    root = tmp_path / "apt-root"
+    (root / "etc/apt/sources.list.d").mkdir(parents=True)
+    return root
+
+
+def _run_apt_normalizer(root: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # nosec B603
+        [str(REPO_ROOT / "docker/normalize-apt-sources.sh"), str(root)],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
+def test_apt_normalizer_rewrites_official_sources_files(tmp_path: Path) -> None:
+    root = _apt_source_root(tmp_path)
+    deb822 = root / "etc/apt/sources.list.d/ubuntu.sources"
+    legacy = root / "etc/apt/sources.list.d/ports.list"
+    deb822.write_text(
+        "\n".join(
+            [
+                "Types: deb",
+                "URIs: http://archive.ubuntu.com/ubuntu/ http://security.ubuntu.com/ubuntu/",
+                "Suites: resolute resolute-updates resolute-security",
+                "Components: main universe",
+                "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg",
+            ]
+        )
+        + "\n"
+    )
+    legacy.write_text("deb http://ports.ubuntu.com/ubuntu-ports/ resolute main\n")
+
+    result = _run_apt_normalizer(root)
+
+    assert result.returncode == 0, result.stderr  # nosec B101
+    assert "http://" not in deb822.read_text()  # nosec B101
+    assert "http://" not in legacy.read_text()  # nosec B101
+    assert "https://archive.ubuntu.com/ubuntu/" in deb822.read_text()  # nosec B101
+    assert "https://security.ubuntu.com/ubuntu/" in deb822.read_text()  # nosec B101
+    assert "https://ports.ubuntu.com/ubuntu-ports/" in legacy.read_text()  # nosec B101
+
+
+def test_apt_normalizer_rejects_remaining_plaintext_sources(tmp_path: Path) -> None:
+    root = _apt_source_root(tmp_path)
+    source = root / "etc/apt/sources.list.d/attacker.list"
+    source.write_text("deb http://attacker.invalid/ubuntu/ resolute main\n")
+
+    result = _run_apt_normalizer(root)
+
+    assert result.returncode != 0  # nosec B101
+    assert "plaintext apt source remained" in result.stderr  # nosec B101
+
+
+def test_apt_normalizer_rejects_insecure_source_options(tmp_path: Path) -> None:
+    root = _apt_source_root(tmp_path)
+    source = root / "etc/apt/sources.list.d/ubuntu.sources"
+    source.write_text(
+        "\n".join(
+            [
+                "Types: deb",
+                "URIs: http://archive.ubuntu.com/ubuntu/",
+                "Suites: resolute",
+                "Components: main",
+                "Trusted: yes",
+                "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg",
+            ]
+        )
+        + "\n"
+    )
+
+    result = _run_apt_normalizer(root)
+
+    assert result.returncode != 0  # nosec B101
+    assert "insecure apt source option is not allowed" in result.stderr  # nosec B101
 
 
 def test_backend_matrix_bypasses_host_proxy_for_internal_services() -> None:
@@ -131,11 +219,10 @@ def test_backend_matrix_bypasses_host_proxy_for_internal_services() -> None:
     assert 'f"{name}="' in backend_matrix  # nosec B101
 
 
-def test_openmemory_submodule_uses_aio_patch_fork() -> None:
+def test_openmemory_submodule_uses_official_upstream() -> None:
     gitmodules = (REPO_ROOT / ".gitmodules").read_text()
     app_manifest = (REPO_ROOT / ".aio-fleet.yml").read_text()
 
-    assert "url = https://github.com/JSONbored/mem0" in gitmodules  # nosec B101
-    assert (  # nosec B101
-        "submodule_ref_template: codex/openmemory-{version}-aio" in app_manifest
-    )
+    assert "url = https://github.com/mem0ai/mem0" in gitmodules  # nosec B101
+    assert "url = https://github.com/JSONbored/mem0" not in gitmodules  # nosec B101
+    assert "submodule_ref_template" not in app_manifest  # nosec B101

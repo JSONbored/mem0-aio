@@ -23,13 +23,14 @@ RUN pnpm build || npm run build
 ARG UPSTREAM_VERSION=v2.0.2
 FROM qdrant/qdrant@sha256:94728574965d17c6485dd361aa3c0818b325b9016dac5ea6afec7b4b2700865f AS qdrant-bin
 
-FROM ubuntu:26.04@sha256:5e275723f82c67e387ba9e3c24baa0abdcb268917f276a0561c97bef9450d0b4
+FROM ubuntu:26.04@sha256:5e275723f82c67e387ba9e3c24baa0abdcb268917f276a0561c97bef9450d0b4 AS runtime-base
 ARG S6_OVERLAY_VERSION=3.2.0.0
 ARG TARGETARCH
 
 COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs
 COPY --from=qdrant-bin /etc/ca-certificates.conf /etc/ca-certificates.conf
 COPY --from=qdrant-bin /usr/share/ca-certificates /usr/share/ca-certificates
+COPY docker/normalize-apt-sources.sh /usr/local/bin/normalize-apt-sources
 
 # Install system dependencies, python, nodejs
 ENV DEBIAN_FRONTEND=noninteractive
@@ -38,30 +39,13 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-# Keep Ubuntu's signed archive URIs intact. Ports images use HTTP by default,
-# and APT verifies signed, fresh InRelease metadata before installing packages.
+# Normalize only official Ubuntu archive URIs to HTTPS and fail closed before
+# package metadata is fetched.
 # hadolint ignore=DL3008
 RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIPv4 "true";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::Pipeline-Depth "0";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";\nAcquire::https::Verify-Peer "true";\nAcquire::https::Verify-Host "true";\nAcquire::Check-Valid-Until "true";\nAcquire::AllowInsecureRepositories "false";\nAcquire::AllowDowngradeToInsecureRepositories "false";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries && \
+    chmod +x /usr/local/bin/normalize-apt-sources && \
     grep -Rqs '^Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' /etc/apt && \
-    if grep -RqsE '(^|[[:space:]])(Trusted:[[:space:]]*yes|Allow-Insecure:[[:space:]]*yes|Allow-Downgrade-To-Insecure:[[:space:]]*yes|trusted=yes|allow-insecure=yes|allow-downgrade-to-insecure=yes)([[:space:]]|$)' /etc/apt; then \
-        echo "insecure apt source option is not allowed" >&2; exit 1; \
-    fi && \
-    apt_source_uris="$( \
-        find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec awk ' \
-            $1 == "URIs:" { for (i = 2; i <= NF; i++) print $i } \
-            $1 == "deb" || $1 == "deb-src" { \
-                for (i = 2; i <= NF; i++) { \
-                    if ($i ~ /^https?:\/\//) { print $i; break } \
-                } \
-            } \
-        ' {} + \
-    )" && \
-    for uri in ${apt_source_uris}; do \
-        case "${uri}" in \
-            http://archive.ubuntu.com/ubuntu/|http://security.ubuntu.com/ubuntu/|http://ports.ubuntu.com/ubuntu-ports/|https://archive.ubuntu.com/ubuntu/|https://security.ubuntu.com/ubuntu/|https://ports.ubuntu.com/ubuntu-ports/) ;; \
-            *) echo "unsupported apt source: ${uri}" >&2; exit 1 ;; \
-        esac; \
-    done && \
+    /usr/local/bin/normalize-apt-sources && \
     apt_update_ok=0 && \
     for attempt in 1 2 3; do \
         if apt-get update; then apt_update_ok=1; break; fi; \
@@ -91,8 +75,15 @@ RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIP
     apt-get install -y --no-install-recommends "${install_packages[@]}" \
     && rm -rf /var/lib/apt/lists/*
 
+FROM runtime-base AS runtime
+ARG S6_OVERLAY_VERSION=3.2.0.0
+ARG TARGETARCH
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Install Node.js 24 to match the UI builder runtime.
-RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource_setup.sh && \
+    bash /tmp/nodesource_setup.sh && \
+    rm -f /tmp/nodesource_setup.sh && \
     apt-get install -y --no-install-recommends nodejs="$(apt-cache madison nodejs | awk 'NR==1 {print $3}')" && \
     rm -rf /var/lib/apt/lists/*
 

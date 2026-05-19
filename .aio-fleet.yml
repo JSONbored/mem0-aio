@@ -31,7 +31,6 @@ upstream:
       release_notes_url: https://github.com/mem0ai/mem0/releases
       submodule_path: openmemory
       submodule_remote: origin
-      submodule_ref_template: codex/openmemory-{version}-aio
 template:
   xml_paths:
     - mem0-aio.xml
