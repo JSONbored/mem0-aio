@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.0.2-aio.3 - 2026-05-19
+
+### Fixes
+
+- Harden mem0 apt and upstream provenance
+
+### Maintenance
+
+- Remove repo-local test deps
+
 ## v2.0.2-aio.2 - 2026-05-17
 
 ### Documentation
