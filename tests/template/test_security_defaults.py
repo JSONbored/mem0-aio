@@ -13,6 +13,24 @@ def _template_configs() -> dict[str, ET.Element]:
     return {config.attrib["Name"]: config for config in root.findall("Config")}
 
 
+def _template_root() -> ET.Element:
+    return ET.parse(REPO_ROOT / "mem0-aio.xml").getroot()
+
+
+def test_ca_metadata_uses_current_categories_and_discovery_fields() -> None:
+    root = _template_root()
+
+    assert root.findtext("Category") == "AI Productivity Tools:Utilities"  # nosec B101
+    assert (
+        root.findtext("ReadMe") == "https://github.com/JSONbored/mem0-aio#readme"
+    )  # nosec B101
+    assert [s.text for s in root.findall("Screenshot")] == [  # nosec B101
+        "https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/screenshots/mem0-aio/01-home.png",
+        "https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/screenshots/mem0-aio/02-memories.png",
+        "https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/screenshots/mem0-aio/03-settings.png",
+    ]
+
+
 def test_api_mcp_port_is_not_published_by_default() -> None:
     root = ET.parse(REPO_ROOT / "mem0-aio.xml").getroot()
     published_ports = {

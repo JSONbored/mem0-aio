@@ -35,12 +35,16 @@
 - Generated from CHANGELOG.md during release preparation. Do not edit manually.&#xD;
 - Harden mem0 apt and upstream provenance&#xD;
 - Remove repo-local test deps</Changes>
-  <Category>AI: Productivity: Tools:Utilities</Category>
+  <Category>AI Productivity Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>
+  <ReadMe>https://github.com/JSONbored/mem0-aio#readme</ReadMe>
   <Icon>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/icons/mem0.jpeg</Icon>
   <ExtraSearchTerms>ai memory mcp llm openmemory qdrant ollama anthropic groq deepseek embeddings vector database</ExtraSearchTerms>
   <Requires>OpenMemory still needs a valid LLM/embedder setup for actual memory generation. For the easiest first boot, keep bundled storage defaults and either set OPENAI_API_KEY or point the app at a reachable native Ollama endpoint with chat and embedding models you already have pulled. External vector storage is advanced: configure exactly one backend.</Requires>
+  <Screenshot>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/screenshots/mem0-aio/01-home.png</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/screenshots/mem0-aio/02-memories.png</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/screenshots/mem0-aio/03-settings.png</Screenshot>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>
