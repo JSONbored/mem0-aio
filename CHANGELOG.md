@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.0.2-aio.4 - 2026-05-26
+
+### Documentation
+
+- Normalize CA metadata
+
 ## v2.0.2-aio.3 - 2026-05-19
 
 ### Fixes
