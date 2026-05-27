@@ -25,6 +25,11 @@ for provider_var in LLM_PROVIDER EMBEDDER_PROVIDER; do
 	fi
 done
 
+if [[ -n ${OLLAMA_BASE_URL-} ]]; then
+	export LLM_PROVIDER="${LLM_PROVIDER:-ollama}"
+	export EMBEDDER_PROVIDER="${EMBEDDER_PROVIDER:-ollama}"
+fi
+
 : >/var/run/mem0-aio.env
 
 runtime_env_vars=(

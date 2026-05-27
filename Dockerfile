@@ -115,10 +115,12 @@ WORKDIR /app
 # Copy API files
 COPY openmemory/openmemory/api/ /app/api/
 COPY docker/patch-openmemory.py /tmp/patch-openmemory.py
+COPY docker/patch-mem0-package.py /tmp/patch-mem0-package.py
 WORKDIR /app/api
 RUN python3 /tmp/patch-openmemory.py && \
     pip install -r requirements.txt && \
-    rm -f /tmp/patch-openmemory.py
+    python3 /tmp/patch-mem0-package.py && \
+    rm -f /tmp/patch-openmemory.py /tmp/patch-mem0-package.py
 WORKDIR /app
 
 # Copy standalone UI runtime from Stage 1
