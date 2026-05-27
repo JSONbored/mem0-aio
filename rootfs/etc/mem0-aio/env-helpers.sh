@@ -84,6 +84,10 @@ mem0_validate_vector_store_config() {
 		printf 'mem0-aio configuration error: Elasticsearch requires at least ELASTICSEARCH_HOST and ELASTICSEARCH_PORT when any Elasticsearch host or credential override is set.\n' >&2
 		return 1
 	fi
+	if [[ -n ${ELASTICSEARCH_HOST-} || -n ${ELASTICSEARCH_PORT-} || -n ${ELASTICSEARCH_USER-} ]] && [[ -z ${ELASTICSEARCH_PASSWORD-} ]]; then
+		printf 'mem0-aio configuration error: Elasticsearch requires ELASTICSEARCH_PASSWORD when Elasticsearch is selected.\n' >&2
+		return 1
+	fi
 
 	if [[ -n ${OPENSEARCH_HOST-} || -n ${OPENSEARCH_PORT-} || -n ${OPENSEARCH_USER-} || -n ${OPENSEARCH_PASSWORD-} ]] && [[ -z ${OPENSEARCH_HOST-} || -z ${OPENSEARCH_PORT-} ]]; then
 		printf 'mem0-aio configuration error: OpenSearch requires at least OPENSEARCH_HOST and OPENSEARCH_PORT when any OpenSearch host or credential override is set.\n' >&2

@@ -101,6 +101,9 @@ def test_openai_categorization_is_optional_for_local_provider_boot() -> None:
     assert 'vector_store_config["embedding_model_dims"]' in patcher  # nosec B101
     assert "elasticsearch_scheme" in patcher  # nosec B101
     assert "ELASTICSEARCH_USE_SSL" in patcher  # nosec B101
+    assert "ELASTICSEARCH_PASSWORD is required" in patcher  # nosec B101
+    assert "ELASTICSEARCH_PASSWORD', 'changeme'" not in patcher  # nosec B101
+    assert "with config: {vector_store_config}" not in patcher  # nosec B101
     assert 'Path("/app/api/app/mcp_server.py")' in patcher  # nosec B101
     assert "top_k=10" in patcher  # nosec B101
     assert "openai_client = None" in patcher  # nosec B101

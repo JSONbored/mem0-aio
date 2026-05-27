@@ -158,7 +158,7 @@ def _get_embedding_model_dims():
 )
 
 vector_start = '    vector_store_config = {\n        "collection_name": "openmemory",\n        "host": "mem0_store",\n    }\n'
-vector_print = '    print(f"Auto-detected vector store: {vector_store_provider} with config: {vector_store_config}")\n'
+vector_end = "\n\n    # Detect LLM provider from environment variables\n"
 vector_block = """    qdrant_host = os.environ.get("QDRANT_HOST", "127.0.0.1")
     qdrant_port = os.environ.get("QDRANT_PORT", "6333")
     qdrant_is_external = bool(
@@ -220,12 +220,15 @@ vector_block = """    qdrant_host = os.environ.get("QDRANT_HOST", "127.0.0.1")
     elif os.environ.get('ELASTICSEARCH_HOST') and os.environ.get('ELASTICSEARCH_PORT'):
         vector_store_provider = "elasticsearch"
         elasticsearch_host = os.environ.get('ELASTICSEARCH_HOST')
+        elasticsearch_password = os.environ.get('ELASTICSEARCH_PASSWORD')
+        if not elasticsearch_password:
+            raise RuntimeError("ELASTICSEARCH_PASSWORD is required when Elasticsearch vector store is selected.")
         elasticsearch_scheme = "https" if os.environ.get('ELASTICSEARCH_USE_SSL', 'true').lower() == 'true' else "http"
         vector_store_config.update({
             "host": f"{elasticsearch_scheme}://{elasticsearch_host}",
             "port": int(os.environ.get('ELASTICSEARCH_PORT')),
             "user": os.environ.get('ELASTICSEARCH_USER', 'elastic'),
-            "password": os.environ.get('ELASTICSEARCH_PASSWORD', 'changeme'),
+            "password": elasticsearch_password,
             "verify_certs": os.environ.get('ELASTICSEARCH_VERIFY_CERTS', 'true').lower() == 'true',
             "use_ssl": os.environ.get('ELASTICSEARCH_USE_SSL', 'true').lower() == 'true',
         })
@@ -270,10 +273,14 @@ vector_block = """    qdrant_host = os.environ.get("QDRANT_HOST", "127.0.0.1")
     if embedding_model_dims is not None and vector_store_provider not in {"chroma", "weaviate"}:
         vector_store_config["embedding_model_dims"] = embedding_model_dims
 
-    print(f"Auto-detected vector store: {vector_store_provider} with config: {vector_store_config}")
+    print(f"Auto-detected vector store: {vector_store_provider}")
 """
 memory_text = replace_between_required(
-    memory_text, vector_start, vector_print, vector_block, "vector store detection"
+    memory_text,
+    vector_start,
+    vector_end,
+    vector_block + vector_end,
+    "vector store detection",
 )
 memory.write_text(memory_text)
 

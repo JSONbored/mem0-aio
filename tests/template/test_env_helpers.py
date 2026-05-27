@@ -68,6 +68,21 @@ def test_qdrant_api_key_requires_external_endpoint() -> None:
     )  # nosec B101
 
 
+def test_elasticsearch_requires_explicit_password() -> None:
+    result = run_vector_helper(
+        {
+            "ELASTICSEARCH_HOST": "elasticsearch",
+            "ELASTICSEARCH_PORT": "9200",
+            "ELASTICSEARCH_USER": "elastic",
+        }
+    )
+
+    assert result.returncode == 1  # nosec B101
+    assert (
+        "Elasticsearch requires ELASTICSEARCH_PASSWORD" in result.stderr
+    )  # nosec B101
+
+
 def test_external_qdrant_host_disables_bundled_store() -> None:
     result = run_vector_helper({"QDRANT_HOST": "qdrant", "QDRANT_PORT": "6333"})
 
