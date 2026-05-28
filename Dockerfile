@@ -61,6 +61,7 @@ RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIP
         python3 \
         python3-pip \
         python3-venv \
+        patch \
         libunwind8 \
     ) && \
     install_packages=() && \
@@ -114,13 +115,11 @@ WORKDIR /app
 
 # Copy API files
 COPY openmemory/openmemory/api/ /app/api/
-COPY docker/patch-openmemory.py /tmp/patch-openmemory.py
-COPY docker/patch-mem0-package.py /tmp/patch-mem0-package.py
+COPY docker/patches/ /tmp/patches/
 WORKDIR /app/api
-RUN python3 /tmp/patch-openmemory.py && \
+RUN patch -l -p2 < /tmp/patches/openmemory-api.patch && \
     pip install -r requirements.txt && \
-    python3 /tmp/patch-mem0-package.py && \
-    rm -f /tmp/patch-openmemory.py /tmp/patch-mem0-package.py
+    rm -rf /tmp/patches
 WORKDIR /app
 
 # Copy standalone UI runtime from Stage 1

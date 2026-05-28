@@ -83,8 +83,7 @@ def test_provider_auto_sentinel_is_unset_before_runtime_env_persistence() -> Non
 
 
 def test_openai_categorization_is_optional_for_local_provider_boot() -> None:
-    patcher = (REPO_ROOT / "docker/patch-openmemory.py").read_text()
-    package_patcher = (REPO_ROOT / "docker/patch-mem0-package.py").read_text()
+    patcher = (REPO_ROOT / "docker/patches/openmemory-api.patch").read_text()
     dockerfile = (REPO_ROOT / "Dockerfile").read_text()
 
     assert "get_default_memory_config" in patcher  # nosec B101
@@ -102,9 +101,11 @@ def test_openai_categorization_is_optional_for_local_provider_boot() -> None:
     assert "elasticsearch_scheme" in patcher  # nosec B101
     assert "ELASTICSEARCH_USE_SSL" in patcher  # nosec B101
     assert "ELASTICSEARCH_PASSWORD is required" in patcher  # nosec B101
-    assert "ELASTICSEARCH_PASSWORD', 'changeme'" not in patcher  # nosec B101
-    assert "with config: {vector_store_config}" not in patcher  # nosec B101
-    assert 'Path("/app/api/app/mcp_server.py")' in patcher  # nosec B101
+    assert '"password": elasticsearch_password' in patcher  # nosec B101
+    assert (  # nosec B101
+        'print(f"Auto-detected vector store: {vector_store_provider}")' in patcher
+    )
+    assert "refresh_vector_store_if_supported" in patcher  # nosec B101
     assert "top_k=10" in patcher  # nosec B101
     assert "openai_client = None" in patcher  # nosec B101
     assert "def _get_openai_client()" in patcher  # nosec B101
@@ -112,8 +113,13 @@ def test_openai_categorization_is_optional_for_local_provider_boot() -> None:
     assert 'os.environ.get("OPENAI_ADMIN_KEY")' in patcher  # nosec B101
     assert "return []" in patcher  # nosec B101
     assert "OpenAI()" in patcher  # nosec B101
-    assert "COPY docker/patch-mem0-package.py" in dockerfile  # nosec B101
-    assert "bulk(self.client, actions, refresh=True)" in package_patcher  # nosec B101
+    assert "COPY docker/patches/" in dockerfile  # nosec B101
+    assert (
+        "patch -l -p2 < /tmp/patches/openmemory-api.patch" in dockerfile
+    )  # nosec B101
+    assert "mem0-src" not in dockerfile  # nosec B101
+    assert "patch-mem0-package.py" not in dockerfile  # nosec B101
+    assert "patch-openmemory.py" not in dockerfile  # nosec B101
 
 
 def test_external_search_backends_verify_tls_by_default() -> None:
