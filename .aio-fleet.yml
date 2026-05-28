@@ -43,11 +43,23 @@ catalog:
       target: mem0-aio.xml
     - source: assets/mem0.jpeg
       target: icons/mem0.jpeg
+    - source: screenshots/mem0-aio/01-home.png
+      target: screenshots/mem0-aio/01-home.png
+    - source: screenshots/mem0-aio/02-memories.png
+      target: screenshots/mem0-aio/02-memories.png
+    - source: screenshots/mem0-aio/03-settings.png
+      target: screenshots/mem0-aio/03-settings.png
 tests:
   unit: tests/template
   integration: tests/integration -m integration
   checkout_submodules: true
 validation:
+  required_text_fields:
+    - ReadMe
+  exact_category_tokens:
+    - AI
+    - Productivity
+    - Tools:Utilities
   required_targets:
     - /mem0/storage
     - "3000"

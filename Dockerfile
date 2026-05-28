@@ -20,7 +20,7 @@ ENV NEXT_PUBLIC_API_URL=/openmemory-api
 ENV NEXT_PUBLIC_USER_ID=default_user
 RUN pnpm build || npm run build
 
-ARG UPSTREAM_VERSION=v2.0.2
+ARG UPSTREAM_VERSION=v2.0.4
 FROM qdrant/qdrant@sha256:94728574965d17c6485dd361aa3c0818b325b9016dac5ea6afec7b4b2700865f AS qdrant-bin
 
 FROM ubuntu:26.04@sha256:5e275723f82c67e387ba9e3c24baa0abdcb268917f276a0561c97bef9450d0b4 AS runtime-base
@@ -61,6 +61,7 @@ RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIP
         python3 \
         python3-pip \
         python3-venv \
+        patch \
         libunwind8 \
     ) && \
     install_packages=() && \
@@ -114,11 +115,11 @@ WORKDIR /app
 
 # Copy API files
 COPY openmemory/openmemory/api/ /app/api/
-COPY docker/patch-openmemory.py /tmp/patch-openmemory.py
+COPY docker/patches/ /tmp/patches/
 WORKDIR /app/api
-RUN python3 /tmp/patch-openmemory.py && \
+RUN patch -l -p2 < /tmp/patches/openmemory-api.patch && \
     pip install -r requirements.txt && \
-    rm -f /tmp/patch-openmemory.py
+    rm -rf /tmp/patches
 WORKDIR /app
 
 # Copy standalone UI runtime from Stage 1

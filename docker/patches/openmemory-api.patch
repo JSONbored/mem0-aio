@@ -1,0 +1,512 @@
+diff --git a/a/app/database.py b/b/app/database.py
+index 4ab4eaa..ba70a48 100644
+--- a/a/app/database.py
++++ b/b/app/database.py
+@@ -11,10 +11,14 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./openmemory.db")
+ if not DATABASE_URL:
+     raise RuntimeError("DATABASE_URL is not set in environment")
+
++engine_kwargs = {}
++if DATABASE_URL.startswith("sqlite"):
++    engine_kwargs["connect_args"] = {"check_same_thread": False}
++
+ # SQLAlchemy engine & session
+ engine = create_engine(
+     DATABASE_URL,
+-    connect_args={"check_same_thread": False}  # Needed for SQLite
++    **engine_kwargs,
+ )
+ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+diff --git a/a/app/mcp_server.py b/b/app/mcp_server.py
+index 70aa523..ca10029 100644
+--- a/a/app/mcp_server.py
++++ b/b/app/mcp_server.py
+@@ -40,6 +40,24 @@ def get_memory_client_safe():
+     except Exception as e:
+         logging.warning(f"Failed to get memory client: {e}")
+         return None
++
++def refresh_vector_store_if_supported(memory_client):
++    """Refresh backends with eventual-consistency indexes before MCP search."""
++    vector_store = getattr(memory_client, "vector_store", None)
++    collection_name = getattr(vector_store, "collection_name", None)
++    if not collection_name:
++        return
++
++    client = getattr(vector_store, "client", None)
++    indices = getattr(client, "indices", None)
++    refresh = getattr(indices, "refresh", None)
++    if not callable(refresh):
++        return
++
++    try:
++        refresh(index=collection_name)
++    except Exception as e:
++        logging.debug(f"Skipping vector store refresh before search: {e}")
+
+ # Context variables for user_id and client_name
+ user_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("user_id")
+@@ -176,10 +194,11 @@ async def search_memory(query: str) -> str:
+
+             embeddings = memory_client.embedding_model.embed(query, "search")
+
++            refresh_vector_store_if_supported(memory_client)
+             hits = memory_client.vector_store.search(
+                 query=query,
+                 vectors=embeddings,
+-                limit=10,
++                top_k=10,
+                 filters=filters,
+             )
+
+diff --git a/a/app/routers/config.py b/b/app/routers/config.py
+index d55cf78..b37eea1 100644
+--- a/a/app/routers/config.py
++++ b/b/app/routers/config.py
+@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
+
+ from app.database import get_db
+ from app.models import Config as ConfigModel
+-from app.utils.memory import reset_memory_client
++from app.utils.memory import get_default_memory_config, reset_memory_client
+ from fastapi import APIRouter, Depends, HTTPException
+ from pydantic import BaseModel, Field
+ from sqlalchemy.orm import Session
+@@ -47,29 +47,16 @@ class ConfigSchema(BaseModel):
+     mem0: Optional[Mem0Config] = None
+
+ def get_default_configuration():
+-    """Get the default configuration with sensible defaults for LLM and embedder."""
++    """Get the default configuration with wrapper environment defaults."""
++    mem0_config = get_default_memory_config()
+     return {
+         "openmemory": {
+             "custom_instructions": None
+         },
+         "mem0": {
+-            "llm": {
+-                "provider": "openai",
+-                "config": {
+-                    "model": "gpt-4o-mini",
+-                    "temperature": 0.1,
+-                    "max_tokens": 2000,
+-                    "api_key": "env:OPENAI_API_KEY"
+-                }
+-            },
+-            "embedder": {
+-                "provider": "openai",
+-                "config": {
+-                    "model": "text-embedding-3-small",
+-                    "api_key": "env:OPENAI_API_KEY"
+-                }
+-            },
+-            "vector_store": None
++            "llm": mem0_config["llm"],
++            "embedder": mem0_config["embedder"],
++            "vector_store": mem0_config.get("vector_store")
+         }
+     }
+
+diff --git a/a/app/schemas.py b/b/app/schemas.py
+index fd47b64..85e3826 100644
+--- a/a/app/schemas.py
++++ b/b/app/schemas.py
+@@ -2,7 +2,7 @@ from datetime import datetime
+ from typing import List, Optional
+ from uuid import UUID
+
+-from pydantic import BaseModel, ConfigDict, Field, validator
++from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+ class MemoryBase(BaseModel):
+@@ -51,7 +51,8 @@ class MemoryResponse(BaseModel):
+     categories: List[str]
+     metadata_: Optional[dict] = None
+
+-    @validator('created_at', pre=True)
++    @field_validator('created_at', mode='before')
++    @classmethod
+     def convert_to_epoch(cls, v):
+         if isinstance(v, datetime):
+             return int(v.timestamp())
+diff --git a/a/app/utils/categorization.py b/b/app/utils/categorization.py
+index e20c400..adcb6f4 100644
+--- a/a/app/utils/categorization.py
++++ b/b/app/utils/categorization.py
+@@ -1,4 +1,5 @@
+ import logging
++import os
+ from typing import List
+
+ from app.utils.prompts import MEMORY_CATEGORIZATION_PROMPT
+@@ -8,7 +9,18 @@ from pydantic import BaseModel
+ from tenacity import retry, stop_after_attempt, wait_exponential
+
+ load_dotenv()
+-openai_client = OpenAI()
++openai_client = None
++
++
++def _get_openai_client():
++    global openai_client
++    if openai_client is not None:
++        return openai_client
++    if not (os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_ADMIN_KEY")):
++        logging.info("[INFO] Skipping memory categorization because no OpenAI credential is configured.")
++        return None
++    openai_client = OpenAI()
++    return openai_client
+
+
+ class MemoryCategories(BaseModel):
+@@ -17,14 +29,19 @@ class MemoryCategories(BaseModel):
+
+ @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=15))
+ def get_categories_for_memory(memory: str) -> List[str]:
++    completion = None
+     try:
++        client = _get_openai_client()
++        if client is None:
++            return []
++
+         messages = [
+             {"role": "system", "content": MEMORY_CATEGORIZATION_PROMPT},
+             {"role": "user", "content": memory}
+         ]
+
+         # Let OpenAI handle the pydantic parsing directly
+-        completion = openai_client.beta.chat.completions.parse(
++        completion = client.beta.chat.completions.parse(
+             model="gpt-4o-mini",
+             messages=messages,
+             response_format=MemoryCategories,
+diff --git a/a/app/utils/memory.py b/b/app/utils/memory.py
+index 7afce59..9973b0a 100644
+--- a/a/app/utils/memory.py
++++ b/b/app/utils/memory.py
+@@ -57,17 +57,17 @@ def _get_docker_host_url():
+     if custom_host:
+         print(f"Using custom Ollama host from OLLAMA_HOST: {custom_host}")
+         return custom_host.replace('http://', '').replace('https://', '').split(':')[0]
+-
++
+     # Check if we're running inside Docker
+     if not os.path.exists('/.dockerenv'):
+         # Not in Docker, return localhost as-is
+         return "localhost"
+-
++
+     print("Detected Docker environment, adjusting host URL for Ollama...")
+-
++
+     # Try different host resolution strategies
+     host_candidates = []
+-
++
+     # 1. host.docker.internal (works on Docker Desktop for Mac/Windows)
+     try:
+         socket.gethostbyname('host.docker.internal')
+@@ -75,7 +75,7 @@ def _get_docker_host_url():
+         print("Found host.docker.internal")
+     except socket.gaierror:
+         pass
+-
++
+     # 2. Docker bridge gateway (typically 172.17.0.1 on Linux)
+     try:
+         with open('/proc/net/route', 'r') as f:
+@@ -89,12 +89,12 @@ def _get_docker_host_url():
+                     break
+     except (FileNotFoundError, IndexError, ValueError):
+         pass
+-
++
+     # 3. Fallback to common Docker bridge IP
+     if not host_candidates:
+         host_candidates.append('172.17.0.1')
+         print("Using fallback Docker bridge IP: 172.17.0.1")
+-
++
+     # Return the first available candidate
+     return host_candidates[0]
+
+@@ -107,9 +107,9 @@ def _fix_ollama_urls(config_section):
+     """
+     if not config_section or "config" not in config_section:
+         return config_section
+-
++
+     ollama_config = config_section["config"]
+-
++
+     # Set default ollama_base_url if not provided
+     if "ollama_base_url" not in ollama_config:
+         ollama_config["ollama_base_url"] = "http://host.docker.internal:11434"
+@@ -122,7 +122,7 @@ def _fix_ollama_urls(config_section):
+                 new_url = url.replace("localhost", docker_host).replace("127.0.0.1", docker_host)
+                 ollama_config["ollama_base_url"] = new_url
+                 print(f"Adjusted Ollama URL from {url} to {new_url}")
+-
++
+     return config_section
+
+
+@@ -206,6 +206,28 @@ _EMBEDDER_CONFIG_FACTORIES = {
+ }
+
+
++def _get_embedding_model_dims():
++    explicit_dims = os.environ.get("EMBEDDER_DIMENSIONS")
++    if explicit_dims:
++        return int(explicit_dims)
++
++    provider = (
++        os.environ.get("EMBEDDER_PROVIDER")
++        or os.environ.get("LLM_PROVIDER")
++        or ""
++    ).lower()
++    if provider != "ollama" and not os.environ.get("OLLAMA_BASE_URL"):
++        return None
++
++    model = (os.environ.get("EMBEDDER_MODEL") or "nomic-embed-text").split(":", 1)[0].lower()
++    known_ollama_dims = {
++        "nomic-embed-text": 768,
++        "mxbai-embed-large": 1024,
++        "all-minilm": 384,
++    }
++    return known_ollama_dims.get(model)
++
++
+ def _create_embedder_config(provider, model, api_key, base_url, ollama_base_url, llm_base_url):
+     """Build embedder config using registered provider factory or generic fallback."""
+     factory = _EMBEDDER_CONFIG_FACTORIES.get(provider)
+@@ -227,27 +249,28 @@ def _create_embedder_config(provider, model, api_key, base_url, ollama_base_url,
+ def get_default_memory_config():
+     """Get default memory client configuration with sensible defaults."""
+     # Detect vector store based on environment variables
++    qdrant_host = os.environ.get("QDRANT_HOST", "127.0.0.1")
++    qdrant_port = os.environ.get("QDRANT_PORT", "6333")
++    qdrant_is_external = bool(
++        os.environ.get("QDRANT_URL")
++        or os.environ.get("QDRANT_API_KEY")
++        or qdrant_host not in {"127.0.0.1", "localhost", ""}
++    )
++
+     vector_store_config = {
+         "collection_name": "openmemory",
+         "host": "mem0_store",
+     }
+-
+-    # Check for different vector store configurations based on environment variables
++
++    # Keep this precedence aligned with mem0-aio's shell validation helper.
+     if os.environ.get('CHROMA_HOST') and os.environ.get('CHROMA_PORT'):
+         vector_store_provider = "chroma"
+         vector_store_config.update({
+             "host": os.environ.get('CHROMA_HOST'),
+             "port": int(os.environ.get('CHROMA_PORT'))
+         })
+-    elif os.environ.get('QDRANT_HOST') and os.environ.get('QDRANT_PORT'):
+-        vector_store_provider = "qdrant"
+-        vector_store_config.update({
+-            "host": os.environ.get('QDRANT_HOST'),
+-            "port": int(os.environ.get('QDRANT_PORT'))
+-        })
+     elif os.environ.get('WEAVIATE_CLUSTER_URL') or (os.environ.get('WEAVIATE_HOST') and os.environ.get('WEAVIATE_PORT')):
+         vector_store_provider = "weaviate"
+-        # Prefer an explicit cluster URL if provided; otherwise build from host/port
+         cluster_url = os.environ.get('WEAVIATE_CLUSTER_URL')
+         if not cluster_url:
+             weaviate_host = os.environ.get('WEAVIATE_HOST')
+@@ -274,58 +297,74 @@ def get_default_memory_config():
+         })
+     elif os.environ.get('MILVUS_HOST') and os.environ.get('MILVUS_PORT'):
+         vector_store_provider = "milvus"
+-        # Construct the full URL as expected by MilvusDBConfig
+         milvus_host = os.environ.get('MILVUS_HOST')
+         milvus_port = int(os.environ.get('MILVUS_PORT'))
+         milvus_url = f"http://{milvus_host}:{milvus_port}"
+-
+         vector_store_config = {
+             "collection_name": "openmemory",
+             "url": milvus_url,
+-            "token": os.environ.get('MILVUS_TOKEN', ''),  # Always include, empty string for local setup
++            "token": os.environ.get('MILVUS_TOKEN', ''),
+             "db_name": os.environ.get('MILVUS_DB_NAME', ''),
+-            "embedding_model_dims": 1536,
+-            "metric_type": "COSINE"  # Using COSINE for better semantic similarity
++            "metric_type": "COSINE"
+         }
+     elif os.environ.get('ELASTICSEARCH_HOST') and os.environ.get('ELASTICSEARCH_PORT'):
+         vector_store_provider = "elasticsearch"
+-        # Construct the full URL with scheme since Elasticsearch client expects it
+         elasticsearch_host = os.environ.get('ELASTICSEARCH_HOST')
+-        elasticsearch_port = int(os.environ.get('ELASTICSEARCH_PORT'))
+-        # Use http:// scheme since we're not using SSL
+-        full_host = f"http://{elasticsearch_host}"
+-
++        elasticsearch_password = os.environ.get('ELASTICSEARCH_PASSWORD')
++        if not elasticsearch_password:
++            raise RuntimeError("ELASTICSEARCH_PASSWORD is required when Elasticsearch vector store is selected.")
++        elasticsearch_scheme = "https" if os.environ.get('ELASTICSEARCH_USE_SSL', 'true').lower() == 'true' else "http"
+         vector_store_config.update({
+-            "host": full_host,
+-            "port": elasticsearch_port,
++            "host": f"{elasticsearch_scheme}://{elasticsearch_host}",
++            "port": int(os.environ.get('ELASTICSEARCH_PORT')),
+             "user": os.environ.get('ELASTICSEARCH_USER', 'elastic'),
+-            "password": os.environ.get('ELASTICSEARCH_PASSWORD', 'changeme'),
+-            "verify_certs": False,
+-            "use_ssl": False,
+-            "embedding_model_dims": 1536
++            "password": elasticsearch_password,
++            "verify_certs": os.environ.get('ELASTICSEARCH_VERIFY_CERTS', 'true').lower() == 'true',
++            "use_ssl": os.environ.get('ELASTICSEARCH_USE_SSL', 'true').lower() == 'true',
+         })
+     elif os.environ.get('OPENSEARCH_HOST') and os.environ.get('OPENSEARCH_PORT'):
+         vector_store_provider = "opensearch"
+         vector_store_config.update({
+             "host": os.environ.get('OPENSEARCH_HOST'),
+-            "port": int(os.environ.get('OPENSEARCH_PORT'))
++            "port": int(os.environ.get('OPENSEARCH_PORT')),
++            "user": os.environ.get('OPENSEARCH_USER', 'admin'),
++            "password": os.environ.get('OPENSEARCH_PASSWORD'),
++            "verify_certs": os.environ.get('OPENSEARCH_VERIFY_CERTS', 'true').lower() == 'true',
++            "use_ssl": os.environ.get('OPENSEARCH_USE_SSL', 'true').lower() == 'true',
+         })
+     elif os.environ.get('FAISS_PATH'):
+         vector_store_provider = "faiss"
+         vector_store_config = {
+             "collection_name": "openmemory",
+             "path": os.environ.get('FAISS_PATH'),
+-            "embedding_model_dims": 1536,
+             "distance_strategy": "cosine"
+         }
+     else:
+-        # Default fallback to Qdrant
+         vector_store_provider = "qdrant"
+         vector_store_config.update({
+-            "port": 6333,
++            "host": qdrant_host,
++            "port": int(qdrant_port),
+         })
+-
+-    print(f"Auto-detected vector store: {vector_store_provider} with config: {vector_store_config}")
++        if qdrant_is_external:
++            if os.environ.get("QDRANT_URL"):
++                vector_store_config = {
++                    "collection_name": "openmemory",
++                    "url": os.environ.get("QDRANT_URL"),
++                }
++            else:
++                vector_store_config.update({
++                    "host": qdrant_host,
++                    "port": int(qdrant_port),
++                })
++            if os.environ.get("QDRANT_API_KEY"):
++                vector_store_config["api_key"] = os.environ.get("QDRANT_API_KEY")
++
++    embedding_model_dims = _get_embedding_model_dims()
++    if embedding_model_dims is not None and vector_store_provider not in {"chroma", "weaviate"}:
++        vector_store_config["embedding_model_dims"] = embedding_model_dims
++
++    print(f"Auto-detected vector store: {vector_store_provider}")
++
+
+     # Detect LLM provider from environment variables
+     llm_provider = os.environ.get('LLM_PROVIDER', 'openai').lower()
+@@ -419,26 +458,26 @@ def get_memory_client(custom_instructions: str = None):
+     try:
+         # Start with default configuration
+         config = get_default_memory_config()
+-
++
+         # Variable to track custom instructions
+         db_custom_instructions = None
+-
++
+         # Load configuration from database
+         try:
+             db = SessionLocal()
+             db_config = db.query(ConfigModel).filter(ConfigModel.key == "main").first()
+-
++
+             if db_config:
+                 json_config = db_config.value
+-
++
+                 # Extract custom instructions from openmemory settings
+                 if "openmemory" in json_config and "custom_instructions" in json_config["openmemory"]:
+                     db_custom_instructions = json_config["openmemory"]["custom_instructions"]
+-
++
+                 # Override defaults with configurations from the database
+                 if "mem0" in json_config:
+                     mem0_config = json_config["mem0"]
+-
++
+                     # Update LLM configuration if available
+                     if "llm" in mem0_config and mem0_config["llm"] is not None:
+                         config["llm"] = mem0_config["llm"]
+@@ -451,9 +490,9 @@ def get_memory_client(custom_instructions: str = None):
+                         config["vector_store"] = mem0_config["vector_store"]
+             else:
+                 print("No configuration found in database, using defaults")
+-
++
+             db.close()
+-
++
+         except Exception as e:
+             print(f"Warning: Error loading configuration from database: {e}")
+             print("Using default configuration")
+@@ -477,7 +516,7 @@ def get_memory_client(custom_instructions: str = None):
+
+         # Check if config has changed by comparing hashes
+         current_config_hash = _get_config_hash(config)
+-
++
+         # Only reinitialize if config changed or client doesn't exist
+         if _memory_client is None or _config_hash != current_config_hash:
+             print(f"Initializing memory client with config hash: {current_config_hash}")
+@@ -491,9 +530,9 @@ def get_memory_client(custom_instructions: str = None):
+                 _memory_client = None
+                 _config_hash = None
+                 return None
+-
++
+         return _memory_client
+-
++
+     except Exception as e:
+         print(f"Warning: Exception occurred while initializing memory client: {e}")
+         print("Server will continue running with limited memory functionality")
+diff --git a/a/requirements.txt b/b/requirements.txt
+index 1874957..c05fc8b 100644
+--- a/a/requirements.txt
++++ b/b/requirements.txt
+@@ -7,7 +7,7 @@ psycopg2-binary>=2.9.0
+ python-multipart>=0.0.27
+ urllib3>=2.7.0
+ fastapi-pagination>=0.12.0
+-mem0ai>=0.1.92
++mem0ai>=0.1.92
+ openai>=1.40.0
+ mcp[cli]>=1.25.4
+ starlette>=0.40.0
+@@ -17,4 +17,11 @@ httpx>=0.24.0
+ pytest-cov>=4.0.0
+ tenacity==9.1.2
+ anthropic==0.51.0
+-ollama==0.4.8
+\ No newline at end of file
++ollama==0.4.8
++redis
++redisvl
++chromadb
++weaviate-client
++elasticsearch>=8,<9
++opensearch-py
++faiss-cpu

@@ -75,6 +75,51 @@ def test_provider_auto_sentinel_is_unset_before_runtime_env_persistence() -> Non
     )
     assert '[[ ${!provider_var-} == "auto" ]]' in bootstrap  # nosec B101
     assert 'unset "${provider_var}"' in bootstrap  # nosec B101
+    assert "[[ -n ${OLLAMA_BASE_URL-} ]]" in bootstrap  # nosec B101
+    assert 'export LLM_PROVIDER="${LLM_PROVIDER:-ollama}"' in bootstrap  # nosec B101
+    assert (  # nosec B101
+        'export EMBEDDER_PROVIDER="${EMBEDDER_PROVIDER:-ollama}"' in bootstrap
+    )
+
+
+def test_openai_categorization_is_optional_for_local_provider_boot() -> None:
+    patcher = (REPO_ROOT / "docker/patches/openmemory-api.patch").read_text()
+    dockerfile = (REPO_ROOT / "Dockerfile").read_text()
+
+    assert "get_default_memory_config" in patcher  # nosec B101
+    assert "wrapper environment defaults" in patcher  # nosec B101
+    assert "redisvl" in patcher  # nosec B101
+    assert "chromadb" in patcher  # nosec B101
+    assert "faiss-cpu" in patcher  # nosec B101
+    assert "elasticsearch>=8,<9" in patcher  # nosec B101
+    assert "qdrant_is_external" in patcher  # nosec B101
+    assert "Keep this precedence aligned" in patcher  # nosec B101
+    assert "def _get_embedding_model_dims()" in patcher  # nosec B101
+    assert 'os.environ.get("EMBEDDER_DIMENSIONS")' in patcher  # nosec B101
+    assert '"nomic-embed-text": 768' in patcher  # nosec B101
+    assert 'vector_store_config["embedding_model_dims"]' in patcher  # nosec B101
+    assert "elasticsearch_scheme" in patcher  # nosec B101
+    assert "ELASTICSEARCH_USE_SSL" in patcher  # nosec B101
+    assert "ELASTICSEARCH_PASSWORD is required" in patcher  # nosec B101
+    assert '"password": elasticsearch_password' in patcher  # nosec B101
+    assert (  # nosec B101
+        'print(f"Auto-detected vector store: {vector_store_provider}")' in patcher
+    )
+    assert "refresh_vector_store_if_supported" in patcher  # nosec B101
+    assert "top_k=10" in patcher  # nosec B101
+    assert "openai_client = None" in patcher  # nosec B101
+    assert "def _get_openai_client()" in patcher  # nosec B101
+    assert 'os.environ.get("OPENAI_API_KEY")' in patcher  # nosec B101
+    assert 'os.environ.get("OPENAI_ADMIN_KEY")' in patcher  # nosec B101
+    assert "return []" in patcher  # nosec B101
+    assert "OpenAI()" in patcher  # nosec B101
+    assert "COPY docker/patches/" in dockerfile  # nosec B101
+    assert (
+        "patch -l -p2 < /tmp/patches/openmemory-api.patch" in dockerfile
+    )  # nosec B101
+    assert "mem0-src" not in dockerfile  # nosec B101
+    assert "patch-mem0-package.py" not in dockerfile  # nosec B101
+    assert "patch-openmemory.py" not in dockerfile  # nosec B101
 
 
 def test_external_search_backends_verify_tls_by_default() -> None:
