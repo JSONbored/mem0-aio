@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.0.5-aio.1 - 2026-06-12
+
+### Maintenance
+
+- Bump mem0 to v2.0.5 (#98)
+
+### Tests
+
+- Use shared app test helpers
+
 ## v2.0.4-aio.1 - 2026-05-28
 
 ### Maintenance
