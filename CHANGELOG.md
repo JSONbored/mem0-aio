@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.0.6-aio.1 - 2026-06-17
+
+### Maintenance
+
+- Bump mem0 to v2.0.6 (#100)
+
 ## v2.0.5-aio.1 - 2026-06-12
 
 ### Maintenance
