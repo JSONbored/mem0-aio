@@ -1,7 +1,7 @@
 # checkov:skip=CKV_DOCKER_3: s6 init coordinates multiple bundled services before they drop privileges, so this image does not use a single final USER instruction
 # checkov:skip=CKV_DOCKER_7: the qdrant helper stage is pinned by immutable digest instead of a mutable tag
 # checkov:skip=CKV_DOCKER_9: package versions are resolved with apt-cache madison before apt-get install
-FROM jsonbored/aio-base:s6-3.2.1.0 AS aio-base
+FROM jsonbored/aio-base:s6-3.2.1.0@sha256:07db479a01a95ba28480b4605f5d1cc8bedb574b77cf167ee46e29b9558fee90 AS aio-base
 
 FROM node:24-slim@sha256:879b21aec4a1ad820c27ccd565e7c7ed955f24b92e6694556154f251e4bdb240 AS ui-builder
 
