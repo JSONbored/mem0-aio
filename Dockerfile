@@ -1,6 +1,8 @@
 # checkov:skip=CKV_DOCKER_3: s6 init coordinates multiple bundled services before they drop privileges, so this image does not use a single final USER instruction
 # checkov:skip=CKV_DOCKER_7: the qdrant helper stage is pinned by immutable digest instead of a mutable tag
 # checkov:skip=CKV_DOCKER_9: package versions are resolved with apt-cache madison before apt-get install
+FROM jsonbored/aio-base:s6-3.2.1.0 AS aio-base
+
 FROM node:24-slim@sha256:879b21aec4a1ad820c27ccd565e7c7ed955f24b92e6694556154f251e4bdb240 AS ui-builder
 
 # Enable corepack for pnpm
@@ -24,7 +26,6 @@ ARG UPSTREAM_VERSION=v2.0.6
 FROM qdrant/qdrant@sha256:94728574965d17c6485dd361aa3c0818b325b9016dac5ea6afec7b4b2700865f AS qdrant-bin
 
 FROM ubuntu:26.04@sha256:5e275723f82c67e387ba9e3c24baa0abdcb268917f276a0561c97bef9450d0b4 AS runtime-base
-ARG S6_OVERLAY_VERSION=3.2.0.0
 ARG TARGETARCH
 
 COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs
@@ -77,7 +78,6 @@ RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIP
     && rm -rf /var/lib/apt/lists/*
 
 FROM runtime-base AS runtime
-ARG S6_OVERLAY_VERSION=3.2.0.0
 ARG TARGETARCH
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -97,18 +97,8 @@ COPY --from=qdrant-bin /qdrant/config /qdrant/config
 COPY --from=qdrant-bin /qdrant/static /qdrant/static
 
 # Install S6 Overlay
-RUN set -e && \
-    S6_ARCH="${TARGETARCH:-$(uname -m)}" && \
-    if [ "$S6_ARCH" = "x86_64" ]; then S6_ARCH="x86_64"; \
-    elif [ "$S6_ARCH" = "amd64" ]; then S6_ARCH="x86_64"; \
-    elif [ "$S6_ARCH" = "aarch64" ]; then S6_ARCH="aarch64"; \
-    elif [ "$S6_ARCH" = "arm64" ]; then S6_ARCH="aarch64"; \
-    else echo "Unsupported architecture: $S6_ARCH" && exit 1; fi && \
-    curl -fsSL -o /tmp/s6-overlay-noarch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" && \
-    tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
-    curl -fsSL -o "/tmp/s6-overlay-${S6_ARCH}.tar.xz" "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" && \
-    tar -C / -Jxpf "/tmp/s6-overlay-${S6_ARCH}.tar.xz" && \
-    rm /tmp/s6-overlay-*.tar.xz
+# Shared, pinned s6-overlay from the fleet aio-base overlay.
+COPY --from=aio-base /aio-overlay/ /
 
 # Setup App Directory
 WORKDIR /app
