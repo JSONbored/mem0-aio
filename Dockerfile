@@ -26,8 +26,6 @@ ARG UPSTREAM_VERSION=v2.0.6
 FROM qdrant/qdrant@sha256:94728574965d17c6485dd361aa3c0818b325b9016dac5ea6afec7b4b2700865f AS qdrant-bin
 
 FROM ubuntu:26.04@sha256:5e275723f82c67e387ba9e3c24baa0abdcb268917f276a0561c97bef9450d0b4 AS runtime-base
-ARG TARGETARCH
-
 COPY --from=qdrant-bin /etc/ssl/certs /etc/ssl/certs
 COPY --from=qdrant-bin /etc/ca-certificates.conf /etc/ca-certificates.conf
 COPY --from=qdrant-bin /usr/share/ca-certificates /usr/share/ca-certificates
@@ -78,7 +76,6 @@ RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIP
     && rm -rf /var/lib/apt/lists/*
 
 FROM runtime-base AS runtime
-ARG TARGETARCH
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install Node.js 24 to match the UI builder runtime.
