@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.0.7-aio.1 - 2026-06-18
+
+### Maintenance
+
+- Bump mem0 to v2.0.7 (#102)
+
+### Refactors
+
+- Migrate to the shared aio-base s6 overlay (#103)
+
 ## v2.0.6-aio.1 - 2026-06-17
 
 ### Maintenance
