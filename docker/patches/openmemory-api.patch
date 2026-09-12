@@ -60,6 +60,16 @@ index 70aa523..ca10029 100644
                  filters=filters,
              )
 
+@@ -245,7 +264,7 @@ async def list_memories() -> str:
+             user, app = get_user_and_app(db, user_id=uid, app_id=client_name)
+
+             # Get all memories
+-            memories = memory_client.get_all(user_id=uid)
++            memories = memory_client.get_all(filters={"user_id": uid})
+             filtered_memories = []
+
+             # Filter memories based on permissions
+
 diff --git a/a/app/routers/config.py b/b/app/routers/config.py
 index d55cf78..b37eea1 100644
 --- a/a/app/routers/config.py
