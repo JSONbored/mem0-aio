@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.2.1-aio.1 - 2026-11-24
+
+### Fixes
+
+- Update Mem0 without dropping OpenMemory
+
+- Use the supported FastMCP release for OpenMemory
+
+- Match Redis client libraries to the Mem0 2.2.1 provider
+
+### Other Changes
+
+- Modify memory retrieval in openmemory-api.patchfix: patch get_all() to use filters={"user_id": ...} for list_memories
+
+### style
+
+- Format the Google SDK runtime check
+
 ## v2.0.7-aio.1 - 2026-06-18
 
 ### Maintenance

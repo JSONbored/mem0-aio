@@ -31,10 +31,13 @@
 - Actual memory generation still requires a valid LLM/embedder configuration. Leaving [code]OPENAI_API_KEY[/code] blank is fine if you are using Ollama, but you still need to provide a reachable Ollama endpoint and valid model names.&#xD;
 - Native Ollama uses the root API URL such as [code]http://host.docker.internal:11434[/code], not an OpenAI-compatible [code]/v1[/code] path. If your reverse proxy adds auth and only exposes an OpenAI-style [code]/v1[/code] endpoint, use the advanced OpenAI-compatible base URL fields instead of the native Ollama provider path.&#xD;
 - The embedded Qdrant service is intentionally bundled for the beginner AIO path; it is skipped only when one valid external vector backend is configured.</Overview>
-  <Changes>### 2026-06-18&#xD;
+  <Changes>### 2026-11-24&#xD;
 - Generated from CHANGELOG.md during release preparation. Do not edit manually.&#xD;
-- Bump mem0 to v2.0.7 (#102)&#xD;
-- Migrate to the shared aio-base s6 overlay (#103)</Changes>
+- Update Mem0 without dropping OpenMemory&#xD;
+- Use the supported FastMCP release for OpenMemory&#xD;
+- Match Redis client libraries to the Mem0 2.2.1 provider&#xD;
+- Modify memory retrieval in openmemory-api.patchfix: patch get_all() to use filters={"user_id": ...} for list_memories&#xD;
+- Format the Google SDK runtime check</Changes>
   <Category>AI Productivity Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/JSONbored/awesome-unraid/main/mem0-aio.xml</TemplateURL>
