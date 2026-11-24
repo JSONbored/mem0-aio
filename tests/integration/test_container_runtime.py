@@ -92,7 +92,14 @@ def test_happy_path_boot_and_restart(built_image: str) -> None:
         with container(storage_volume) as (name, ui_port, api_port, qdrant_port):
             wait_for_ready(name, ui_port, api_port, qdrant_port)
             run_command(
-                ["docker", "exec", name, "/opt/venv/bin/python", "-c", "from google import genai"]
+                [
+                    "docker",
+                    "exec",
+                    name,
+                    "/opt/venv/bin/python",
+                    "-c",
+                    "from google import genai",
+                ]
             )
             run_command(
                 [
