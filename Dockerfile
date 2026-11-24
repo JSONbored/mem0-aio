@@ -104,8 +104,10 @@ WORKDIR /app
 COPY openmemory/openmemory/api/ /app/api/
 COPY docker/patches/ /tmp/patches/
 WORKDIR /app/api
+# This OpenMemory source uses the MCP v1 FastMCP and SSE server APIs.
 RUN patch -l -p2 < /tmp/patches/openmemory-api.patch && \
-    pip install -r requirements.txt "mem0ai==${UPSTREAM_VERSION#v}" "google-genai>=1.0.0" && \
+    pip install -r requirements.txt "mem0ai==${UPSTREAM_VERSION#v}" "google-genai>=1.0.0" "mcp[cli]==1.30.0" && \
+    python -c 'from mcp.server.fastmcp import FastMCP' && \
     rm -rf /tmp/patches
 WORKDIR /app
 
