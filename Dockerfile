@@ -22,7 +22,6 @@ ENV NEXT_PUBLIC_API_URL=/openmemory-api
 ENV NEXT_PUBLIC_USER_ID=default_user
 RUN pnpm build || npm run build
 
-ARG UPSTREAM_VERSION=v2.0.7
 FROM qdrant/qdrant@sha256:94728574965d17c6485dd361aa3c0818b325b9016dac5ea6afec7b4b2700865f AS qdrant-bin
 
 FROM ubuntu:26.04@sha256:5e275723f82c67e387ba9e3c24baa0abdcb268917f276a0561c97bef9450d0b4 AS runtime-base
@@ -76,6 +75,7 @@ RUN printf 'Acquire::Retries "3";\nAcquire::Queue-Mode "host";\nAcquire::ForceIP
     && rm -rf /var/lib/apt/lists/*
 
 FROM runtime-base AS runtime
+ARG UPSTREAM_VERSION=v2.2.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install Node.js 24 to match the UI builder runtime.
@@ -104,8 +104,10 @@ WORKDIR /app
 COPY openmemory/openmemory/api/ /app/api/
 COPY docker/patches/ /tmp/patches/
 WORKDIR /app/api
+# This OpenMemory source uses the MCP v1 FastMCP and SSE server APIs.
 RUN patch -l -p2 < /tmp/patches/openmemory-api.patch && \
-    pip install -r requirements.txt && \
+    pip install -r requirements.txt "mem0ai==${UPSTREAM_VERSION#v}" "google-genai>=1.0.0" "mcp[cli]==1.30.0" && \
+    python -c 'from mcp.server.fastmcp import FastMCP' && \
     rm -rf /tmp/patches
 WORKDIR /app
 
