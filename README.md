@@ -2,9 +2,11 @@
 
 ![mem0-aio](https://socialify.git.ci/JSONbored/mem0-aio/image?custom_description=Unraid+CA+AIO+template+and+Docker+image+for+Mem0+%28OpenMemory%29%2C+an+AI+memory+retention+layer.&custom_language=Dockerfile&description=1&font=Raleway&forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F137054526%3Fs%3D200%26v%3D4&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Light)
 
-An Unraid-first, single-container deployment of [Mem0 OpenMemory](https://github.com/mem0ai/mem0/tree/main/openmemory) for people who want the easiest reliable self-hosted install without manually wiring a separate vector database on day one.
+An Unraid-first, single-container deployment of [Mem0 OpenMemory](https://github.com/mem0ai/mem0/tree/158e9111cbb8b116b83ff5ce486252709b01e192/openmemory) for people who want the easiest reliable self-hosted install without manually wiring a separate vector database on day one.
 
 `mem0-aio` keeps the critical first-boot dependency bundled: Qdrant plus persistent local storage. The wrapper is opinionated for a predictable beginner install, but it does not hide the real tradeoffs: OpenMemory still needs a valid model/provider configuration to do useful work, external vector backends and hosted model endpoints still need operator knowledge, and exposing the direct MCP/API port is a deliberate security decision rather than a default requirement.
+
+The UI and API use the last source revision packaged by this project. Upstream retired OpenMemory and removed it from subsequent SDK releases. The Dockerfile pins the Python SDK independently so updating it preserves the UI, API and backup utilities. [Upstream maintenance notice](https://github.com/mem0ai/mem0/issues/6082)
 
 ## What This Image Includes
 
