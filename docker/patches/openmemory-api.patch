@@ -513,8 +513,8 @@ index 1874957..c05fc8b 100644
 -ollama==0.4.8
 \ No newline at end of file
 +ollama==0.4.8
-+redis
-+redisvl
++redis==5.3.1
++redisvl==0.26.0
 +chromadb
 +weaviate-client
 +elasticsearch>=8,<9
